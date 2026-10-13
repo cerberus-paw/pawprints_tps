@@ -12,7 +12,7 @@ require __DIR__ . '/layouts/header.php';
          HERO — Foto de la entrada de la tienda con tagline superpuesto.
          ============================================================ -->
     <figure>
-      <img src="frontend/img/entrada-tienda.jpg" alt="Entrada de la librería PAWPrints en Mercedes, Buenos Aires">
+      <img src="/img/entrada-tienda.jpg" alt="Entrada de la librería PAWPrints en Mercedes, Buenos Aires">
       <figcaption>
         <h1>Nuestra Casa de Palabras</h1>
         <p>Un proyecto familiar nacido de la pasión compartida por los libros y la comunidad.</p>

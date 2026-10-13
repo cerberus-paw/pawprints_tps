@@ -1,0 +1,5 @@
+# La configuración de cada máquina: se versiona sólo config.example.ini.
+pawprints/backend/config/config.ini
+
+# Los registros de la aplicación.
+pawprints/backend/logs/*.log

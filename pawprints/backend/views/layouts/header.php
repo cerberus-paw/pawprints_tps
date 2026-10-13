@@ -14,7 +14,7 @@ $description = $description ?? 'Librería independiente en Mercedes, Buenos Aire
 $activePage = $activePage ?? 'inicio';
 $pageClass = $pageClass ?? 'page-inicio';
 $extraCss = $extraCss ?? [];
-$assetPath = 'frontend/';
+$assetPath = '/';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -39,19 +39,18 @@ $assetPath = 'frontend/';
        ============================================================ -->
   <header>
 
-    <p><a href="index.php"><img src="<?= $assetPath ?>img/pawprints-icono.svg" alt="" width="22" height="32">PAWPrints — Librería</a></p>
+    <p><a href="/"><img src="<?= $assetPath ?>img/pawprints-icono.svg" alt="" width="22" height="32">PAWPrints — Librería</a></p>
 
     <nav aria-label="Navegación principal">
       <ul>
-        <li><a href="index.php?action=inicio"<?= $activePage === 'inicio' ? ' aria-current="page"' : '' ?>>Inicio</a></li>
-        <li><a href="index.php?action=catalogo"<?= $activePage === 'catalogo' ? ' aria-current="page"' : '' ?>>Catálogo</a></li>
-        <li><a href="index.php?action=sobre-nosotros"<?= $activePage === 'sobre-nosotros' ? ' aria-current="page"' : '' ?>>Sobre Nosotros</a></li>
+        <li><a href="/"<?= $activePage === 'inicio' ? ' aria-current="page"' : '' ?>>Inicio</a></li>
+        <li><a href="/catalogo"<?= $activePage === 'catalogo' ? ' aria-current="page"' : '' ?>>Catálogo</a></li>
+        <li><a href="/sobre-nosotros"<?= $activePage === 'sobre-nosotros' ? ' aria-current="page"' : '' ?>>Sobre Nosotros</a></li>
       </ul>
     </nav>
 
     <search>
-      <form action="index.php" method="get">
-        <input type="hidden" name="action" value="catalogo">
+      <form action="/catalogo" method="get">
         <label for="busqueda">Buscar libros</label>
         <input type="search" id="busqueda" name="q" placeholder="Título, autor o género">
         <button type="submit">Buscar</button>

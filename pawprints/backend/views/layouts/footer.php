@@ -31,9 +31,9 @@
     <nav aria-label="Navegación del pie de página">
       <h2>Navegación</h2>
       <ul>
-        <li><a href="index.php?action=inicio">Inicio</a></li>
-        <li><a href="index.php?action=catalogo">Catálogo completo</a></li>
-        <li><a href="index.php?action=sobre-nosotros">Sobre Nosotros</a></li>
+        <li><a href="/">Inicio</a></li>
+        <li><a href="/catalogo">Catálogo completo</a></li>
+        <li><a href="/sobre-nosotros">Sobre Nosotros</a></li>
       </ul>
     </nav>
 
