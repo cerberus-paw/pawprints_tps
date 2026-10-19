@@ -300,7 +300,8 @@ cambian:
 | Formato | `formato` | Tapa dura, tapa blanda o digital |
 | Rango de precio | `precio` | Los tres tramos del wireframe |
 | Ordenar por | `orden` | `recomendados` (el orden del catálogo), `precio-asc`, `precio-desc` y `titulo-az` |
-| Paginado | `pagina` | Desde 1, de a cuatro libros |
+| Libros por página | `por_pagina` | `4` (la de por defecto), `8`, `12` o `24`. Cualquier otro valor cae en la de por defecto |
+| Paginado | `pagina` | Desde 1. Cuántas hay depende de `por_pagina` |
 
 **Lo que no existe.** Un libro cuyo id no está en el catálogo, un id que no es un número y una
 página del catálogo más allá de la última responden `404` con
@@ -316,6 +317,12 @@ encontró nada, con un enlace para volver al catálogo completo.
   de «todas». Filtrar por varios géneros a la vez queda para cuando haya base de datos.
 - **Una página que no existe es un 404; una búsqueda vacía, no.** Un `?pagina=7` escrito a mano o
   un enlace viejo no tienen que parecer un catálogo que se quedó sin libros.
+- **La cantidad por página es una lista cerrada, y un valor cualquiera no es un error.** `4`, `8`,
+  `12` o `24`; cualquier otra cosa cae en la de por defecto, igual que un orden desconocido, porque
+  cuántos registros se ven es una forma de mirar el listado y no otro recurso. Que la lista sea
+  cerrada evita además que un `?por_pagina=` escrito a mano se traiga el catálogo entero en un solo
+  pedido. Cambiarla vuelve a la página 1: con otra cantidad por página, la página 3 de antes ya no
+  es la misma.
 - **El CSV es otra ruta y no un parámetro.** `/catalogo/csv` identifica a la otra representación
   del mismo recurso, igual que `/libros/{id}` identifica a un libro; la query sigue siendo para
   filtrar. Se descarga con la búsqueda y los filtros puestos, pero sin paginar: en una planilla las

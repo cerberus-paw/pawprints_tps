@@ -22,8 +22,17 @@ final class LibroRepository extends JsonRepository implements CatalogoDeLibros
 {
     protected const FILE = 'libros.json';
 
-    /** Cuántos libros entran en una página del catálogo. */
-    public const POR_PAGINA = 4;
+    /**
+     * Cuántos libros por página se pueden pedir con `?por_pagina=…`. Es una lista cerrada y no un
+     * número libre: así un pedido no puede traerse el catálogo entero de una vez, y el desplegable
+     * de la vista ofrece estas mismas opciones y no otras.
+     *
+     * @var list<int>
+     */
+    public const CANTIDADES = [4, 8, 12, 24];
+
+    /** Cuántos libros entran en una página del catálogo si no se pide otra cantidad. */
+    public const POR_PAGINA = self::CANTIDADES[0];
 
     /**
      * Los rangos de precio de la barra de filtros: valor de la query => [mínimo, máximo] en pesos.

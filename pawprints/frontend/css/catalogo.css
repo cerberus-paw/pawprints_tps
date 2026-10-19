@@ -288,10 +288,13 @@
   color: var(--v800);
 }
 
-/* Barra superior de herramientas y ordenamiento */
+/* Barra superior de herramientas: orden y cantidad de libros por página */
 .page-catalogo section[aria-labelledby="titulo-lista-libros"] form[action="/catalogo"] {
   display: flex;
   align-items: center;
+  /* Dos pares de etiqueta y desplegable más el botón no entran en una línea en pantallas
+     intermedias; antes del breakpoint que los apila, pasan a dos filas en lugar de desbordar. */
+  flex-wrap: wrap;
   gap: var(--sp-3);
   background: var(--v50);
   padding: var(--sp-3) var(--sp-5);

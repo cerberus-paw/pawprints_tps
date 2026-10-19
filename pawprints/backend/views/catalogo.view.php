@@ -11,6 +11,8 @@
  * @var int    $total     resultados de la búsqueda, en todas las páginas
  * @var int    $pagina    la página que se está viendo, desde 1
  * @var int    $paginas   cuántas hay
+ * @var int    $porPagina cuántos libros entran en una página
+ * @var list<int>             $cantidades las que se pueden elegir en el desplegable
  * @var array<string, string> $filtros  los de la query, sin los vacíos
  * @var array<string, int>    $generos  género => cuántos libros
  * @var array<string, int>    $formatos formato => cuántos libros
@@ -170,6 +172,10 @@ $slug = static fn (string $valor): string => preg_replace('/[^a-z0-9]+/', '-', s
           <?php endif; ?>
         </p>
 
+        <!-- El orden y la cantidad por página van en la misma barra y con un solo botón: las dos
+             cambian cómo se ve este mismo listado. Sin el campo oculto de «pagina», cambiar
+             cualquiera de las dos vuelve a la primera página, que es lo que se espera: con otra
+             cantidad por página, la página 3 de antes ya no es la misma. -->
         <form action="/catalogo" method="get">
           <label for="ordenar-libros">Ordenar por:</label>
           <select id="ordenar-libros" name="orden">
@@ -177,8 +183,18 @@ $slug = static fn (string $valor): string => preg_replace('/[^a-z0-9]+/', '-', s
             <option value="<?= htmlspecialchars($valor) ?>"<?= $ordenActivo === $valor ? ' selected' : '' ?>><?= htmlspecialchars($etiqueta) ?></option>
             <?php endforeach; ?>
           </select>
-          <button type="submit">Ordenar</button>
-          <?php $ocultos(['orden']); ?>
+
+          <label for="libros-por-pagina">Libros por página:</label>
+          <select id="libros-por-pagina" name="por_pagina">
+            <?php foreach ($cantidades as $cantidad): ?>
+            <option value="<?= $cantidad ?>"<?= $porPagina === $cantidad ? ' selected' : '' ?>><?= $cantidad ?></option>
+            <?php endforeach; ?>
+          </select>
+
+          <!-- «Actualizar» y no «Aplicar»: el botón de los filtros, al costado, ya dice «Aplicar
+               Filtros», y dos botones parecidos en la misma pantalla se confunden. -->
+          <button type="submit">Actualizar</button>
+          <?php $ocultos(['orden', 'por_pagina']); ?>
         </form>
 
         <?php if ($libros === []): ?>

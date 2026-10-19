@@ -20,10 +20,11 @@ use PawPrints\Models\LibroRepository;
 class CatalogoController extends Controller
 {
     /**
-     * Lo que forma «la vista actual» del catálogo y por eso viaja en los enlaces del paginado y
-     * del CSV. El número de página no está acá: se agrega aparte.
+     * Lo que forma «la vista actual» del catálogo —la búsqueda, los filtros, el orden y cuántos
+     * libros entran en una página— y por eso viaja en los enlaces del paginado y del CSV y en los
+     * campos ocultos de cada formulario. El número de página no está acá: se agrega aparte.
      */
-    private const FILTROS = ['q', 'genero', 'formato', 'precio', 'orden'];
+    private const FILTROS = ['q', 'genero', 'formato', 'precio', 'orden', 'por_pagina'];
 
     /**
      * Los órdenes que ofrece el desplegable, en el orden en que se muestran. La clave es el valor
@@ -40,15 +41,19 @@ class CatalogoController extends Controller
 
     private ?AutorRepository $autores = null;
 
-    /** GET /catalogo, con la búsqueda, los filtros, el orden y la página en la query. */
+    /**
+     * GET /catalogo, con la búsqueda, los filtros, el orden, la página y cuántos libros entran en
+     * ella en la query.
+     */
     public function index(Request $request): Response
     {
         $filtros = $this->filtros($request);
         $resultados = $this->libros()->buscar($filtros);
         $total = count($resultados);
+        $porPagina = self::porPagina($request);
 
         // Sin resultados sigue habiendo una página 1, que es la que muestra «no encontramos nada».
-        $paginas = max(1, (int) ceil($total / LibroRepository::POR_PAGINA));
+        $paginas = max(1, (int) ceil($total / $porPagina));
         $pagina = filter_var(
             (string) $request->query('pagina', '1'),
             FILTER_VALIDATE_INT,
@@ -67,14 +72,12 @@ class CatalogoController extends Controller
             'activePage' => 'catalogo',
             'pageClass' => 'page-catalogo',
             'extraCss' => ['catalogo.css'],
-            'libros' => array_slice(
-                $resultados,
-                ($pagina - 1) * LibroRepository::POR_PAGINA,
-                LibroRepository::POR_PAGINA,
-            ),
+            'libros' => array_slice($resultados, ($pagina - 1) * $porPagina, $porPagina),
             'total' => $total,
             'pagina' => $pagina,
             'paginas' => $paginas,
+            'porPagina' => $porPagina,
+            'cantidades' => LibroRepository::CANTIDADES,
             'filtros' => $filtros,
             'generos' => $this->libros()->generos(),
             'formatos' => $this->libros()->formatos(),
@@ -169,6 +172,22 @@ class CatalogoController extends Controller
         }
 
         return $filtros;
+    }
+
+    /**
+     * Cuántos libros por página, de `?por_pagina=…`. Las opciones son las de
+     * LibroRepository::CANTIDADES y cualquier otra cosa cae en la de por defecto, como pasa con un
+     * orden desconocido: cuántos registros se ven es una forma de mirar el listado y no otro
+     * recurso, así que no es un 404. Que la lista sea cerrada evita, además, que un `?por_pagina=`
+     * escrito a mano se traiga el catálogo entero en un solo pedido.
+     */
+    private static function porPagina(Request $request): int
+    {
+        $pedido = filter_var((string) $request->query('por_pagina', ''), FILTER_VALIDATE_INT);
+
+        return in_array($pedido, LibroRepository::CANTIDADES, true)
+            ? $pedido
+            : LibroRepository::POR_PAGINA;
     }
 
     /**
