@@ -196,7 +196,7 @@ final class App
         // persona, para poder encontrar en el log el error del que vino a hablar.
         $referencia = null;
         if ($status >= 500) {
-            $referencia = bin2hex(random_bytes(3));
+            $referencia = sprintf('%06d', random_int(0, 999999));
             $this->logger->error('Error no controlado en {method} {path} (referencia {referencia})', [
                 'method' => $request->method(),
                 'path' => $request->path(),

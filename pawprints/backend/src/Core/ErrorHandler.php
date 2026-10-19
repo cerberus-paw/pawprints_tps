@@ -40,6 +40,9 @@ final class ErrorHandler
         ini_set('display_errors', '0');
         ini_set('display_startup_errors', '0');
         ini_set('log_errors', '1');
+        // La traza sin los argumentos de cada llamada: si no, el nombre o el correo de una reserva
+        // quedarían en el log y en el detalle de desarrollo. Tampoco depende del php.ini.
+        ini_set('zend.exception_ignore_args', '1');
         error_reporting(E_ALL);
 
         set_error_handler($handler->avisoDePhp(...));

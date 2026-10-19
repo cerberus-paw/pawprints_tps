@@ -47,8 +47,12 @@ final class Config
         return is_array($values) && array_key_exists($name, $values) ? $values[$name] : $default;
     }
 
+    /**
+     * Sólo un «desarrollo» explícito sale de producción: una clave que falta o mal escrita no
+     * puede terminar mostrando el detalle de un error.
+     */
     public function inProduction(): bool
     {
-        return $this->get('app.entorno') === 'produccion';
+        return $this->get('app.entorno') !== 'desarrollo';
     }
 }

@@ -260,9 +260,8 @@ en el log.
   el paginado, en la query (`/catalogo?q=borges&pagina=2`), porque son la misma página vista de
   otra forma.
 - **Errores.** Un controlador que no encuentra lo que le piden lanza `HttpException::notFound()`.
-  Todos los errores terminan en [`App::errorResponse()`](pawprints/backend/src/App.php), que por
-  ahora responde un texto genérico sin rutas ni código y deja el detalle en el log; el punto 6 se
-  apoya ahí.
+  Todos los errores terminan en [`App::errorResponse()`](pawprints/backend/src/App.php), que arma
+  la página de error y deja el detalle en el log ([punto 6](#6-errores)).
 - **Maquetas.** Las cinco páginas `.html` del TP2 siguen en `frontend/` como el maquetado que se
   entregó entonces, pero ya ninguna ruta las usa: las cinco pantallas se sirven desde su
   controlador. El `MaquetaController` provisorio se borró junto con sus rutas.
@@ -273,6 +272,9 @@ Requiere PHP 8.1 o superior. Para probarlo desde la raíz del repositorio:
 cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
 php -S localhost:8080 -t pawprints/frontend
 ```
+
+El ejemplo viene con `entorno = "produccion"`. Para ver el detalle de los errores mientras se
+trabaja, cambiarlo a `"desarrollo"` en `config.ini`.
 
 ### 4. Catálogo
 
@@ -432,7 +434,8 @@ el suyo, más preciso.
 estado, el mensaje y la referencia: ni la clase de la excepción, ni el archivo, ni la línea, ni la
 traza, ni una ruta del servidor. Todo eso va a `logs/app.log`, que está fuera de la raíz pública y
 no se puede pedir por URL. Con `app.entorno = "desarrollo"`, la misma página agrega el detalle
-abajo, para no tener que ir a buscar el log en cada vuelta.
+abajo, para no tener que ir a buscar el log en cada vuelta. Cualquier otro valor, o la clave
+ausente, cuenta como producción: el detalle sólo aparece si se lo pide explícitamente.
 
 **Lo que PHP no manda por ese camino.**
 [`Core/ErrorHandler`](pawprints/backend/src/Core/ErrorHandler.php) se registra antes de que la
@@ -449,7 +452,8 @@ aplicación arranque y tapa los tres agujeros que quedaban:
 - **`display_errors` apagado siempre, en los dos entornos.** Cuánto se muestra lo decide la página
   de error, que sabe escapar lo que imprime y dónde ponerlo; un aviso impreso por PHP sale en
   cualquier parte del HTML. De paso, el manejo de errores no depende del `php.ini` del servidor
-  donde se publique, que es el punto 7.
+  donde se publique, que es el punto 7. Por lo mismo se fuerza `zend.exception_ignore_args`: la
+  traza no lleva los argumentos de cada llamada, que podrían ser los datos de una reserva.
 - **En producción el detalle no se oculta: no se genera.** Esconderlo con CSS lo deja igual en el
   código fuente, a un «ver código» de distancia.
 - **Una referencia de seis dígitos.** La misma que se le muestra a la persona queda en la entrada
