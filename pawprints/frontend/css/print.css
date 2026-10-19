@@ -388,7 +388,9 @@
      ---------------------------------------------------------------- */
   .page-catalogo main > section:nth-of-type(1) search,
   .page-catalogo aside[aria-labelledby="titulo-filtros"],
-  .page-catalogo section[aria-labelledby="titulo-lista-libros"] > form[action="catalogo.html"] {
+  .page-catalogo section[aria-labelledby="titulo-lista-libros"] > form[action="/catalogo"],
+  .page-catalogo nav[aria-label="Paginado del catálogo"],
+  .page-catalogo section[aria-labelledby="titulo-lista-libros"] > p:last-child {
     display: none;
   }
 

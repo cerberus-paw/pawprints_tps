@@ -182,6 +182,8 @@ clases de presentación.
 | [`css/componentes.css`](pawprints/frontend/css/componentes.css) | Lo compartido: header, nav, buscador, carrito, footer y botones |
 | [`css/inicio.css`](pawprints/frontend/css/inicio.css) | Hero, libros recomendados, promociones y eventos |
 | [`css/sobre-nosotros.css`](pawprints/frontend/css/sobre-nosotros.css) | Hero full-bleed, historia, servicios y ubicación |
+| [`css/catalogo.css`](pawprints/frontend/css/catalogo.css) | Buscador, barra de filtros, tarjetas de libro y paginado |
+| [`css/detalle-libro.css`](pawprints/frontend/css/detalle-libro.css) | Ficha del libro, reseña del autor y recomendaciones |
 | [`css/reserva.css`](pawprints/frontend/css/reserva.css) | Formulario y tarjeta de resumen del libro |
 | [`css/print.css`](pawprints/frontend/css/print.css) | Versión de impresión, común a todas las páginas |
 
@@ -193,8 +195,6 @@ finos de las tarjetas).
 a blanco y negro, fija `@page` en A4, evita cortar tarjetas entre hojas, oculta buscador, carrito y
 mapas, y expande los enlaces con su URL entre paréntesis.
 
-**Pendiente:** [`catalogo.html`](pawprints/frontend/catalogo.html) y
-[`detalle-libro.html`](pawprints/frontend/detalle-libro.html) todavía no tienen su hoja propia.
 
 ## TP3 — Programación Backend 1
 
@@ -263,10 +263,9 @@ en el log.
   Todos los errores terminan en [`App::errorResponse()`](pawprints/backend/src/App.php), que por
   ahora responde un texto genérico sin rutas ni código y deja el detalle en el log; el punto 6 se
   apoya ahí.
-- **Maquetas.** `catalogo.html` y `detalle-libro.html` siguen en `frontend/` hasta que el punto 4
-  tenga su controlador. Mientras tanto, `/catalogo` y `/libros/{id}` redirigen a ellas desde
-  [`MaquetaController`](pawprints/backend/src/Controllers/MaquetaController.php), para que el menú
-  no quede roto.
+- **Maquetas.** Las cinco páginas `.html` del TP2 siguen en `frontend/` como el maquetado que se
+  entregó entonces, pero ya ninguna ruta las usa: las cinco pantallas se sirven desde su
+  controlador. El `MaquetaController` provisorio se borró junto con sus rutas.
 
 Requiere PHP 8.1 o superior. Para probarlo desde la raíz del repositorio:
 
@@ -275,8 +274,71 @@ cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.i
 php -S localhost:8080 -t pawprints/frontend
 ```
 
-### 5. Reserva
+### 4. Catálogo
 
+| Ruta | Qué hace |
+| --- | --- |
+| `GET /catalogo` | El listado. La búsqueda, los filtros, el orden y la página van en la query |
+| `GET /catalogo/csv` | El mismo listado, con los mismos filtros y sin paginar, para abrir en una planilla |
+| `GET /libros/{id}` | La ficha del libro, con el botón que lleva a `/reserva?libro={id}` |
+
+[`CatalogoController`](pawprints/backend/src/Controllers/CatalogoController.php) atiende las tres.
+[`Models/LibroRepository`](pawprints/backend/src/Models/LibroRepository.php) resuelve la búsqueda,
+los filtros y el orden sobre [`data/libros.json`](pawprints/backend/data/libros.json), y
+[`Models/AutorRepository`](pawprints/backend/src/Models/AutorRepository.php) trae la reseña del
+autor para la ficha. Las vistas son [`catalogo`](pawprints/backend/views/catalogo.view.php) y
+[`libro`](pawprints/backend/views/libro.view.php).
+
+**Qué se puede pedir.** Todo viaja en la query, así que cualquier vista del catálogo es un enlace
+que se puede compartir, y los formularios de la página conservan en campos ocultos lo que no
+cambian:
+
+| Control | Parámetro | Qué hace |
+| --- | --- | --- |
+| Buscador | `q` | Texto libre sobre título, autor, género e ISBN. Sin tildes y sin distinguir mayúsculas (`ficcion` encuentra «Ficción»); el ISBN se encuentra con guiones o sin ellos |
+| Categorías | `genero` | Un género exacto, con la cantidad de libros al lado |
+| Formato | `formato` | Tapa dura, tapa blanda o digital |
+| Rango de precio | `precio` | Los tres tramos del wireframe |
+| Ordenar por | `orden` | `recomendados` (el orden del catálogo), `precio-asc`, `precio-desc` y `titulo-az` |
+| Paginado | `pagina` | Desde 1, de a cuatro libros |
+
+**Lo que no existe.** Un libro cuyo id no está en el catálogo, un id que no es un número y una
+página del catálogo más allá de la última responden `404` con
+[`HttpException::notFound()`](pawprints/backend/src/Core/HttpException.php). Una búsqueda sin
+resultados, en cambio, responde `200`: la página existe y lo que hay para decir es que no se
+encontró nada, con un enlace para volver al catálogo completo.
+
+#### Decisiones
+
+- **Una opción por filtro.** El wireframe mostraba casillas, pero
+  [`Core/Request`](pawprints/backend/src/Core/Request.php) descarta los parámetros que llegan como
+  arreglo (`?genero[]=…`), así que los filtros son botones de radio: una opción por filtro, más la
+  de «todas». Filtrar por varios géneros a la vez queda para cuando haya base de datos.
+- **Una página que no existe es un 404; una búsqueda vacía, no.** Un `?pagina=7` escrito a mano o
+  un enlace viejo no tienen que parecer un catálogo que se quedó sin libros.
+- **El CSV es otra ruta y no un parámetro.** `/catalogo/csv` identifica a la otra representación
+  del mismo recurso, igual que `/libros/{id}` identifica a un libro; la query sigue siendo para
+  filtrar. Se descarga con la búsqueda y los filtros puestos, pero sin paginar: en una planilla las
+  páginas no significan nada. Lo arma [`Core/Csv`](pawprints/backend/src/Core/Csv.php) y viaja con
+  `Content-Disposition`, con la marca de orden de bytes que necesita Excel para las tildes.
+- **Sin punto en la ruta del CSV.** `/catalogo.csv` sería más natural, pero el servidor de
+  desarrollo de PHP (`php -S`) trata cualquier ruta con extensión como un archivo estático y
+  responde `404` sin llegar al front controller.
+- **El repositorio devuelve el libro completo.**
+  [`CatalogoDeLibros`](pawprints/backend/src/Models/CatalogoDeLibros.php) —la interfaz de la que
+  depende la reserva— declara `id`, `titulo`, `autor` y `precio`; el repositorio devuelve además
+  género, ISBN, formato, stock y descripción. La reserva usa las cuatro que necesita y el catálogo,
+  el resto.
+- **Sin `mb_*` ni `iconv`.** Sacar las tildes para comparar se hace con `strtr`, para no depender
+  de extensiones que el hosting del punto 7 puede no tener instaladas.
+- **Cuatro libros por página.** El catálogo tiene los seis libros del maquetado, así que con cuatro
+  por página el paginado se ve y se puede probar. Es una constante del repositorio
+  (`LibroRepository::POR_PAGINA`).
+- **Los autores, aparte.** La reseña del autor vive en
+  [`data/autores.json`](pawprints/backend/data/autores.json) y no en cada libro, porque un autor
+  escribe varios libros y su reseña es una sola. El que todavía no tiene foto muestra sólo el texto.
+
+### 5. Reserva
 | Ruta | Qué hace |
 | --- | --- |
 | `GET /reserva` | El formulario. Con `?libro=3` llega con ese libro elegido: es a donde apunta el botón del detalle |

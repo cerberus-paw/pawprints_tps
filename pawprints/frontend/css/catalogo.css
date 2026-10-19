@@ -289,7 +289,7 @@
 }
 
 /* Barra superior de herramientas y ordenamiento */
-.page-catalogo section[aria-labelledby="titulo-lista-libros"] form[action="catalogo.html"] {
+.page-catalogo section[aria-labelledby="titulo-lista-libros"] form[action="/catalogo"] {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -533,12 +533,82 @@
     border-radius: var(--r-md);
   }
 
-  .page-catalogo section[aria-labelledby="titulo-lista-libros"] form[action="catalogo.html"] {
+  .page-catalogo section[aria-labelledby="titulo-lista-libros"] form[action="/catalogo"] {
     flex-direction: column;
     align-items: stretch;
   }
 
   .page-catalogo section[aria-labelledby="titulo-lista-libros"] > ul {
     grid-template-columns: 1fr; /* 1 tarjeta por fila en celulares */
+  }
+}
+
+/* ================================================================
+   5. PAGINADO Y DESCARGA DEL CATÁLOGO
+   Controles nuevos del TP3: el paginado de los resultados y el
+   enlace al mismo listado en CSV.
+   ================================================================ */
+/* Barra de paginado, centrada debajo de las tarjetas */
+.page-catalogo nav[aria-label="Paginado del catálogo"] {
+  margin-top: var(--sp-8); /* Separación de la grilla de resultados */
+}
+
+.page-catalogo nav[aria-label="Paginado del catálogo"] ul {
+  display: flex;
+  flex-wrap: wrap;                 /* En pantallas chicas baja de fila */
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-2);
+  list-style: none;                /* Es una barra de controles, no una lista de lectura */
+}
+
+/* Cada número y cada flecha, como botón */
+.page-catalogo nav[aria-label="Paginado del catálogo"] a {
+  display: inline-block;
+  min-width: 2.5rem;                                   /* Todos del mismo ancho, aunque tengan 1 dígito */
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-v);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--v700);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+  transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+
+.page-catalogo nav[aria-label="Paginado del catálogo"] a:hover {
+  background: var(--v50);
+  border-color: var(--v700);
+}
+
+/* La página actual: el mismo criterio que el menú principal, que se cuelga de aria-current */
+.page-catalogo nav[aria-label="Paginado del catálogo"] a[aria-current="page"] {
+  background: var(--v700);
+  border-color: var(--v700);
+  color: var(--white);
+  cursor: default;
+}
+
+/* Enlace de descarga del CSV, al pie de los resultados */
+.page-catalogo section[aria-labelledby="titulo-lista-libros"] > p:last-child {
+  margin-top: var(--sp-6);
+  font-size: var(--text-sm);
+}
+
+.page-catalogo section[aria-labelledby="titulo-lista-libros"] > p:last-child a {
+  color: var(--v700);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.page-catalogo section[aria-labelledby="titulo-lista-libros"] > p:last-child a:hover {
+  color: var(--v900);
+}
+
+@media (max-width: 600px) {
+  .page-catalogo nav[aria-label="Paginado del catálogo"] a {
+    min-width: 2.25rem;
+    padding: var(--sp-2);
   }
 }
