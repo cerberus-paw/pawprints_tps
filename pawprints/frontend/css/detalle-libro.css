@@ -216,7 +216,7 @@
 }
 
 /* Botón secundario: "Reservar en tienda" */
-.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="reserva.html"] {
+.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="/reserva"] {
   flex: 1;
   min-width: 180px;
   display: inline-flex;
@@ -232,7 +232,7 @@
   transition: background var(--ease), color var(--ease), box-shadow var(--ease);
 }
 
-.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="reserva.html"]:hover {
+.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="/reserva"]:hover {
   background: var(--v50);
   box-shadow: var(--sh-sm);
 }
@@ -297,6 +297,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+}
+
+/* Autor sin foto: al no haber <figure>, el texto es hijo único y ocupa las dos columnas */
+.page-detalle-libro section[aria-labelledby="titulo-sobre-autor"] article > div:only-child {
+  grid-column: 1 / -1;
 }
 
 /* Nombre del autor (H3) */

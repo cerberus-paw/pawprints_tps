@@ -1,0 +1,20 @@
+[
+  {
+    "nombre": "Salvador Baez",
+    "bio": "Salvador Baez es un destacado escritor y ensayista contemporáneo. Apasionado por la narrativa fantástica y las ficciones filosóficas, ha publicado diversas obras aclamadas por la crítica y los lectores.",
+    "imagen": "autor-salvador-baez.jpg",
+    "imagen_alt": "Escritorio de trabajo de Salvador Baez, con una máquina de escribir, hojas y una taza"
+  },
+  {
+    "nombre": "Tomás Resnik",
+    "bio": "Tomás Resnik escribe novela histórica y de misterio. Trabajó durante años en archivos y bibliotecas públicas, y de ahí viene su gusto por las historias que empiezan con un documento fuera de lugar.",
+    "imagen": null,
+    "imagen_alt": null
+  },
+  {
+    "nombre": "Mateo Nomico",
+    "bio": "Mateo Nomico alterna la ficción con el ensayo sobre arte y diseño. Da clases de escritura en Mercedes y publica una columna mensual sobre libros ilustrados.",
+    "imagen": null,
+    "imagen_alt": null
+  }
+]

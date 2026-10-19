@@ -182,6 +182,8 @@ clases de presentación.
 | [`css/componentes.css`](pawprints/frontend/css/componentes.css) | Lo compartido: header, nav, buscador, carrito, footer y botones |
 | [`css/inicio.css`](pawprints/frontend/css/inicio.css) | Hero, libros recomendados, promociones y eventos |
 | [`css/sobre-nosotros.css`](pawprints/frontend/css/sobre-nosotros.css) | Hero full-bleed, historia, servicios y ubicación |
+| [`css/catalogo.css`](pawprints/frontend/css/catalogo.css) | Buscador, barra de filtros, tarjetas de libro y paginado |
+| [`css/detalle-libro.css`](pawprints/frontend/css/detalle-libro.css) | Ficha del libro, reseña del autor y recomendaciones |
 | [`css/reserva.css`](pawprints/frontend/css/reserva.css) | Formulario y tarjeta de resumen del libro |
 | [`css/print.css`](pawprints/frontend/css/print.css) | Versión de impresión, común a todas las páginas |
 
@@ -193,8 +195,6 @@ finos de las tarjetas).
 a blanco y negro, fija `@page` en A4, evita cortar tarjetas entre hojas, oculta buscador, carrito y
 mapas, y expande los enlaces con su URL entre paréntesis.
 
-**Pendiente:** [`catalogo.html`](pawprints/frontend/catalogo.html) y
-[`detalle-libro.html`](pawprints/frontend/detalle-libro.html) todavía no tienen su hoja propia.
 
 ## TP3 — Programación Backend 1
 
@@ -260,13 +260,11 @@ en el log.
   el paginado, en la query (`/catalogo?q=borges&pagina=2`), porque son la misma página vista de
   otra forma.
 - **Errores.** Un controlador que no encuentra lo que le piden lanza `HttpException::notFound()`.
-  Todos los errores terminan en [`App::errorResponse()`](pawprints/backend/src/App.php), que por
-  ahora responde un texto genérico sin rutas ni código y deja el detalle en el log; el punto 6 se
-  apoya ahí.
-- **Maquetas.** `catalogo.html` y `detalle-libro.html` siguen en `frontend/` hasta que el punto 4
-  tenga su controlador. Mientras tanto, `/catalogo` y `/libros/{id}` redirigen a ellas desde
-  [`MaquetaController`](pawprints/backend/src/Controllers/MaquetaController.php), para que el menú
-  no quede roto.
+  Todos los errores terminan en [`App::errorResponse()`](pawprints/backend/src/App.php), que arma
+  la página de error y deja el detalle en el log ([punto 6](#6-errores)).
+- **Maquetas.** Las cinco páginas `.html` del TP2 siguen en `frontend/` como el maquetado que se
+  entregó entonces, pero ya ninguna ruta las usa: las cinco pantallas se sirven desde su
+  controlador. El `MaquetaController` provisorio se borró junto con sus rutas.
 
 Requiere PHP 8.1 o superior. Para probarlo desde la raíz del repositorio:
 
@@ -275,8 +273,81 @@ cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.i
 php -S localhost:8080 -t pawprints/frontend
 ```
 
-### 5. Reserva
+El ejemplo viene con `entorno = "produccion"`. Para ver el detalle de los errores mientras se
+trabaja, cambiarlo a `"desarrollo"` en `config.ini`.
 
+### 4. Catálogo
+
+| Ruta | Qué hace |
+| --- | --- |
+| `GET /catalogo` | El listado. La búsqueda, los filtros, el orden y la página van en la query |
+| `GET /catalogo/csv` | El mismo listado, con los mismos filtros y sin paginar, para abrir en una planilla |
+| `GET /libros/{id}` | La ficha del libro, con el botón que lleva a `/reserva?libro={id}` |
+
+[`CatalogoController`](pawprints/backend/src/Controllers/CatalogoController.php) atiende las tres.
+[`Models/LibroRepository`](pawprints/backend/src/Models/LibroRepository.php) resuelve la búsqueda,
+los filtros y el orden sobre [`data/libros.json`](pawprints/backend/data/libros.json), y
+[`Models/AutorRepository`](pawprints/backend/src/Models/AutorRepository.php) trae la reseña del
+autor para la ficha. Las vistas son [`catalogo`](pawprints/backend/views/catalogo.view.php) y
+[`libro`](pawprints/backend/views/libro.view.php).
+
+**Qué se puede pedir.** Todo viaja en la query, así que cualquier vista del catálogo es un enlace
+que se puede compartir, y los formularios de la página conservan en campos ocultos lo que no
+cambian:
+
+| Control | Parámetro | Qué hace |
+| --- | --- | --- |
+| Buscador | `q` | Texto libre sobre título, autor, género e ISBN. Sin tildes y sin distinguir mayúsculas (`ficcion` encuentra «Ficción»); el ISBN se encuentra con guiones o sin ellos |
+| Categorías | `genero` | Un género exacto, con la cantidad de libros al lado |
+| Formato | `formato` | Tapa dura, tapa blanda o digital |
+| Rango de precio | `precio` | Los tres tramos del wireframe |
+| Ordenar por | `orden` | `recomendados` (el orden del catálogo), `precio-asc`, `precio-desc` y `titulo-az` |
+| Libros por página | `por_pagina` | `4` (la de por defecto), `8`, `12` o `24`. Cualquier otro valor cae en la de por defecto |
+| Paginado | `pagina` | Desde 1. Cuántas hay depende de `por_pagina` |
+
+**Lo que no existe.** Un libro cuyo id no está en el catálogo, un id que no es un número y una
+página del catálogo más allá de la última responden `404` con
+[`HttpException::notFound()`](pawprints/backend/src/Core/HttpException.php). Una búsqueda sin
+resultados, en cambio, responde `200`: la página existe y lo que hay para decir es que no se
+encontró nada, con un enlace para volver al catálogo completo.
+
+#### Decisiones
+
+- **Una opción por filtro.** El wireframe mostraba casillas, pero
+  [`Core/Request`](pawprints/backend/src/Core/Request.php) descarta los parámetros que llegan como
+  arreglo (`?genero[]=…`), así que los filtros son botones de radio: una opción por filtro, más la
+  de «todas». Filtrar por varios géneros a la vez queda para cuando haya base de datos.
+- **Una página que no existe es un 404; una búsqueda vacía, no.** Un `?pagina=7` escrito a mano o
+  un enlace viejo no tienen que parecer un catálogo que se quedó sin libros.
+- **La cantidad por página es una lista cerrada, y un valor cualquiera no es un error.** `4`, `8`,
+  `12` o `24`; cualquier otra cosa cae en la de por defecto, igual que un orden desconocido, porque
+  cuántos registros se ven es una forma de mirar el listado y no otro recurso. Que la lista sea
+  cerrada evita además que un `?por_pagina=` escrito a mano se traiga el catálogo entero en un solo
+  pedido. Cambiarla vuelve a la página 1: con otra cantidad por página, la página 3 de antes ya no
+  es la misma.
+- **El CSV es otra ruta y no un parámetro.** `/catalogo/csv` identifica a la otra representación
+  del mismo recurso, igual que `/libros/{id}` identifica a un libro; la query sigue siendo para
+  filtrar. Se descarga con la búsqueda y los filtros puestos, pero sin paginar: en una planilla las
+  páginas no significan nada. Lo arma [`Core/Csv`](pawprints/backend/src/Core/Csv.php) y viaja con
+  `Content-Disposition`, con la marca de orden de bytes que necesita Excel para las tildes.
+- **Sin punto en la ruta del CSV.** `/catalogo.csv` sería más natural, pero el servidor de
+  desarrollo de PHP (`php -S`) trata cualquier ruta con extensión como un archivo estático y
+  responde `404` sin llegar al front controller.
+- **El repositorio devuelve el libro completo.**
+  [`CatalogoDeLibros`](pawprints/backend/src/Models/CatalogoDeLibros.php) —la interfaz de la que
+  depende la reserva— declara `id`, `titulo`, `autor` y `precio`; el repositorio devuelve además
+  género, ISBN, formato, stock y descripción. La reserva usa las cuatro que necesita y el catálogo,
+  el resto.
+- **Sin `mb_*` ni `iconv`.** Sacar las tildes para comparar se hace con `strtr`, para no depender
+  de extensiones que el hosting del punto 7 puede no tener instaladas.
+- **Cuatro libros por página.** El catálogo tiene los seis libros del maquetado, así que con cuatro
+  por página el paginado se ve y se puede probar. Es una constante del repositorio
+  (`LibroRepository::POR_PAGINA`).
+- **Los autores, aparte.** La reseña del autor vive en
+  [`data/autores.json`](pawprints/backend/data/autores.json) y no en cada libro, porque un autor
+  escribe varios libros y su reseña es una sola. El que todavía no tiene foto muestra sólo el texto.
+
+### 5. Reserva
 | Ruta | Qué hace |
 | --- | --- |
 | `GET /reserva` | El formulario. Con `?libro=3` llega con ese libro elegido: es a donde apunta el botón del detalle |
@@ -339,6 +410,69 @@ se eligen en `config.ini`:
 - **Catálogo.** La reserva depende de
   [`CatalogoDeLibros`](pawprints/backend/src/Models/CatalogoDeLibros.php), una interfaz con
   `todos()` y `porId()` que implementa el repositorio de libros del punto 4.
+
+### 6. Errores
+
+Todo error del sitio termina en la misma página, con el menú y el pie en su lugar, y con el estado
+HTTP que corresponde:
+
+| Estado | Cuándo | Qué dice |
+| --- | --- | --- |
+| `404` | Una ruta que no existe, un libro o una página del catálogo inexistentes | «Página no encontrada», con el mensaje de quien lanzó el error («No encontramos ese libro») |
+| `405` | La ruta existe, pero con otro método (un `POST /catalogo`). Lleva la cabecera `Allow` | «Ese pedido no se puede hacer acá» |
+| `500` | Cualquier error nuestro | «Algo se rompió de nuestro lado», con una referencia para encontrarlo en el log |
+
+[`App::errorResponse()`](pawprints/backend/src/App.php) es el único lugar por donde salen: elige
+el estado, registra lo que haya que investigar y arma la página con la vista
+[`error`](pawprints/backend/views/error.view.php) y
+[`css/error.css`](pawprints/frontend/css/error.css). Los mensajes de cada estado están en
+`App::MENSAJES`, y una [`HttpException`](pawprints/backend/src/Core/HttpException.php) puede traer
+el suyo, más preciso.
+
+**Lo que el cliente no ve.** Con `app.entorno = "produccion"` en
+[`config.ini`](pawprints/backend/config/config.example.ini), la página de error no tiene más que el
+estado, el mensaje y la referencia: ni la clase de la excepción, ni el archivo, ni la línea, ni la
+traza, ni una ruta del servidor. Todo eso va a `logs/app.log`, que está fuera de la raíz pública y
+no se puede pedir por URL. Con `app.entorno = "desarrollo"`, la misma página agrega el detalle
+abajo, para no tener que ir a buscar el log en cada vuelta. Cualquier otro valor, o la clave
+ausente, cuenta como producción: el detalle sólo aparece si se lo pide explícitamente.
+
+**Lo que PHP no manda por ese camino.**
+[`Core/ErrorHandler`](pawprints/backend/src/Core/ErrorHandler.php) se registra antes de que la
+aplicación arranque y tapa los tres agujeros que quedaban:
+
+| | Antes | Ahora |
+| --- | --- | --- |
+| Un aviso (`Undefined array key`, una división por cero) | Se imprimía en medio del HTML con la ruta del archivo | Se convierte en `ErrorException` y sale como cualquier otro error, por la página de error |
+| Una excepción fuera del pedido (falta `config.ini`) | El error de PHP, en pantalla | Al log, y un `500` genérico |
+| Un fatal (memoria agotada, un `require` que no existe) | Lo imprimía PHP y terminaba | Al log, y un `500` en texto plano |
+
+#### Decisiones
+
+- **`display_errors` apagado siempre, en los dos entornos.** Cuánto se muestra lo decide la página
+  de error, que sabe escapar lo que imprime y dónde ponerlo; un aviso impreso por PHP sale en
+  cualquier parte del HTML. De paso, el manejo de errores no depende del `php.ini` del servidor
+  donde se publique, que es el punto 7. Por lo mismo se fuerza `zend.exception_ignore_args`: la
+  traza no lleva los argumentos de cada llamada, que podrían ser los datos de una reserva.
+- **En producción el detalle no se oculta: no se genera.** Esconderlo con CSS lo deja igual en el
+  código fuente, a un «ver código» de distancia.
+- **Una referencia de seis dígitos.** La misma que se le muestra a la persona queda en la entrada
+  del log, así se puede encontrar el error del que vino a hablar sin pedirle que explique nada. No
+  dice nada por sí sola, y por eso puede mostrarse.
+- **Un `4xx` no se registra aparte.** Es parte del uso normal del sitio —un enlace viejo, una
+  dirección escrita a mano— y ya queda en la línea que `App::handle()` escribe por cada pedido. Un
+  `5xx` sí, con la traza.
+- **El fatal responde en texto plano.** Cuando se llega al manejador de apagado, puede haber sido
+  justamente la vista, el autoload o el logger lo que falló: ese `500` no usa nada del núcleo, para
+  no fallar mientras se responde un error. Antes descarta los búferes abiertos, así no sale media
+  página pegada al mensaje.
+- **El `@` se respeta.**
+  [`Config`](pawprints/backend/src/Core/Config.php) y
+  [`Logger`](pawprints/backend/src/Core/Logger.php) lo usan a propósito para encargarse ellos del
+  `.ini` mal escrito o del log sin permisos, así que un aviso silenciado no se convierte en
+  excepción.
+- **Lo que un controlador imprima por su cuenta** (un `var_dump` olvidado) se muestra en desarrollo
+  y se descarta en producción: nadie revisó qué tiene adentro.
 
 ## Entorno de desarrollo
 

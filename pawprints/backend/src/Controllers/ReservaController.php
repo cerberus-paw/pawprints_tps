@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace PawPrints\Controllers;
 
-use LogicException;
 use PawPrints\Core\Controller;
 use PawPrints\Core\Email;
 use PawPrints\Core\Request;
 use PawPrints\Core\Response;
 use PawPrints\Models\CatalogoDeLibros;
+use PawPrints\Models\LibroRepository;
 use PawPrints\Models\Reserva;
 use PawPrints\Models\ReservaInvalida;
 use RuntimeException;
@@ -104,13 +104,12 @@ class ReservaController extends Controller
     }
 
     /**
-     * Pendiente del punto 4: cuando exista el repositorio de libros, esto devuelve
-     * `new LibroRepository()`, que implementa CatalogoDeLibros. Es protected para que una prueba
-     * pueda darle otro catálogo.
+     * El repositorio de libros del punto 4, que implementa CatalogoDeLibros. Es protected para que
+     * una prueba pueda darle otro catálogo.
      */
     protected function nuevoCatalogo(): CatalogoDeLibros
     {
-        throw new LogicException('Falta el repositorio de libros del punto 4: ver ReservaController::nuevoCatalogo().');
+        return new LibroRepository();
     }
 
     private function catalogo(): CatalogoDeLibros

@@ -1,0 +1,80 @@
+[
+  {
+    "id": 1,
+    "titulo": "El Laberinto de los Vientos",
+    "autor": "Salvador Baez",
+    "genero": "Ficción",
+    "isbn": "978-987-1234-56-1",
+    "formato": "Tapa Dura",
+    "precio": 16500,
+    "stock": 7,
+    "resumen": "Una misteriosa travesía a través de ciudades olvidadas donde las ráfagas del viento custodian antiguos secretos.",
+    "descripcion": "Una misteriosa travesía a través de ciudades olvidadas donde las ráfagas del viento custodian antiguos secretos. En esta apasionante obra de ficción, Salvador Baez explora los límites de la memoria, el destino y los lazos invisibles que unen a las personas en momentos de encrucijada.",
+    "imagen": "libro-1.jpg"
+  },
+  {
+    "id": 2,
+    "titulo": "El Secreto de la Torre",
+    "autor": "Tomás Resnik",
+    "genero": "Ficción",
+    "isbn": "978-987-1400-72-0",
+    "formato": "Tapa Blanda",
+    "precio": 14000,
+    "stock": 4,
+    "resumen": "Una intriga detectivesca en una fortaleza medieval donde cada manuscrito encierra un dilema peligroso.",
+    "descripcion": "Una intriga detectivesca en una fortaleza medieval donde cada manuscrito encierra un dilema peligroso. Resnik construye una novela de encierro y sospecha en la que la biblioteca de la torre funciona como un personaje más: cada libro que se abre cambia lo que los demás significan.",
+    "imagen": "libro-2.jpg"
+  },
+  {
+    "id": 3,
+    "titulo": "Sombras en el Horizonte",
+    "autor": "Mateo Nomico",
+    "genero": "Ficción",
+    "isbn": "978-987-2155-83-4",
+    "formato": "Epub / Digital",
+    "precio": 15800,
+    "stock": 12,
+    "resumen": "Una novela profunda sobre viajes marítimos, horizontes lejanos y la búsqueda constante de libertad.",
+    "descripcion": "Una novela profunda sobre viajes marítimos, horizontes lejanos y la búsqueda constante de libertad. A lo largo de tres travesías que ocurren en siglos distintos, Nomico narra la misma pregunta repetida: qué queda de una persona cuando pierde de vista la costa.",
+    "imagen": "libro-3.jpg"
+  },
+  {
+    "id": 4,
+    "titulo": "Ecos del Cosmos",
+    "autor": "Salvador Baez",
+    "genero": "Ciencia",
+    "isbn": "978-987-3044-19-9",
+    "formato": "Tapa Dura",
+    "precio": 17200,
+    "stock": 5,
+    "resumen": "Un recorrido fascinante por los misterios del universo, ondas de radio interestelares y física teórica.",
+    "descripcion": "Un recorrido fascinante por los misterios del universo, ondas de radio interestelares y física teórica. El libro parte de una pregunta sencilla —qué escuchamos cuando apuntamos una antena al cielo— y la sigue hasta los límites de lo que la física actual puede responder, sin pedirle al lector más que curiosidad.",
+    "imagen": "libro-4.jpg"
+  },
+  {
+    "id": 5,
+    "titulo": "Crónicas del Tiempo Olvidado",
+    "autor": "Tomás Resnik",
+    "genero": "Historia",
+    "isbn": "978-987-4122-04-9",
+    "formato": "Tapa Dura",
+    "precio": 18500,
+    "stock": 3,
+    "resumen": "Un compendio de pasajes históricos poco conocidos que transformaron el rumbo de antiguas civilizaciones.",
+    "descripcion": "Un compendio de pasajes históricos poco conocidos que transformaron el rumbo de antiguas civilizaciones. Cada capítulo reconstruye un episodio menor —una sequía, un malentendido diplomático, un cargamento perdido— y muestra cómo decidió el destino de imperios enteros.",
+    "imagen": "libro-5.jpg"
+  },
+  {
+    "id": 6,
+    "titulo": "La Arquitectura de la Mente",
+    "autor": "Mateo Nomico",
+    "genero": "Arte & Diseño",
+    "isbn": "978-987-5988-31-6",
+    "formato": "Tapa Blanda",
+    "precio": 13900,
+    "stock": 9,
+    "resumen": "Un ensayo visual y conceptual sobre cómo la percepción del espacio moldea las ideas creativas.",
+    "descripcion": "Un ensayo visual y conceptual sobre cómo la percepción del espacio moldea las ideas creativas. Entre planos, fotografías y apuntes de taller, Nomico sostiene que no pensamos a pesar del lugar donde estamos, sino con él.",
+    "imagen": "libro-6.jpg"
+  }
+]
