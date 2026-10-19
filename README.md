@@ -263,9 +263,8 @@ en el log.
   Todos los errores terminan en [`App::errorResponse()`](pawprints/backend/src/App.php), que por
   ahora responde un texto genérico sin rutas ni código y deja el detalle en el log; el punto 6 se
   apoya ahí.
-- **Maquetas.** `catalogo.html`, `detalle-libro.html` y `reserva.html` siguen en `frontend/`
-  hasta que los puntos 4 y 5 tengan su controlador. Mientras tanto, `/catalogo`, `/libros/{id}` y
-  `/reserva` redirigen a ellas desde
+- **Maquetas.** `catalogo.html` y `detalle-libro.html` siguen en `frontend/` hasta que el punto 4
+  tenga su controlador. Mientras tanto, `/catalogo` y `/libros/{id}` redirigen a ellas desde
   [`MaquetaController`](pawprints/backend/src/Controllers/MaquetaController.php), para que el menú
   no quede roto.
 
@@ -275,6 +274,71 @@ Requiere PHP 8.1 o superior. Para probarlo desde la raíz del repositorio:
 cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
 php -S localhost:8080 -t pawprints/frontend
 ```
+
+### 5. Reserva
+
+| Ruta | Qué hace |
+| --- | --- |
+| `GET /reserva` | El formulario. Con `?libro=3` llega con ese libro elegido: es a donde apunta el botón del detalle |
+| `POST /reserva` | Valida, manda los correos y redirige con `303` a la confirmación. Si hay errores, vuelve al formulario con `422` |
+| `GET /reserva/confirmacion` | La página de reserva recibida |
+
+[`ReservaController`](pawprints/backend/src/Controllers/ReservaController.php) recibe el
+formulario; [`Models/Reserva`](pawprints/backend/src/Models/Reserva.php) lo valida, y sólo existe
+si es válida; las vistas [`reserva`](pawprints/backend/views/reserva.view.php) y
+[`correos/`](pawprints/backend/views/correos/) generan la página y el texto de cada correo.
+
+**Validaciones.** El navegador valida primero con los atributos del TP1 (por eso se sacó el
+`novalidate` de la maqueta), y el servidor vuelve a validar todo, porque lo del navegador se
+saltea mandando el POST a mano:
+
+| Campo | En el servidor |
+| --- | --- |
+| Nombre | Obligatorio, hasta 100 caracteres. Los espacios y saltos de línea se juntan en uno |
+| Correo | Obligatorio, hasta 254 caracteres, `FILTER_VALIDATE_EMAIL` |
+| Teléfono | Obligatorio, el mismo `pattern` del HTML y de 7 a 15 dígitos |
+| Libro | Un id que exista en el catálogo: el desplegable se puede reemplazar a mano |
+| Cantidad | Entero de 1 a 5 |
+| Comentarios | Opcional, hasta 500 caracteres |
+
+Además, ningún campo admite UTF-8 mal formado ni caracteres de control. Un error se muestra al
+lado de su campo (`aria-invalid` y `aria-describedby`, así el lector de pantalla lo lee al
+enfocarlo) y en un resumen arriba, con lo que la persona ya había escrito.
+
+**Los correos.** Van dos, en texto plano. Al personal (`correo.reservas`), con `Reply-To` del
+cliente, para que responder le escriba directo. Al cliente, una confirmación con `Reply-To` del
+personal. La reserva no se guarda en ningún lado, así que si el aviso al personal no sale la
+reserva se perdería: el cliente vuelve al formulario, con sus datos, y un aviso para que pruebe
+de nuevo (`503`). Si falla sólo la confirmación, la reserva sigue adelante y queda en el log.
+
+El envío está en [`Core/Mailer`](pawprints/backend/src/Core/Mailer.php), con dos transportes que
+se eligen en `config.ini`:
+
+- `transporte = "archivo"`, para desarrollo: [`FileMailer`](pawprints/backend/src/Core/FileMailer.php)
+  guarda cada correo como `.eml` en `backend/logs/correos/`, que se abre con cualquier cliente de
+  correo. No hace falta ninguna cuenta para probar la reserva.
+- `transporte = "smtp"`, para el sitio publicado: [`SmtpMailer`](pawprints/backend/src/Core/SmtpMailer.php),
+  un cliente SMTP con STARTTLS y `AUTH LOGIN`, con los datos de la sección `[smtp]`. Con Gmail:
+  `smtp.gmail.com`, puerto 587, `"tls"`, y una [contraseña de aplicación](https://myaccount.google.com/apppasswords).
+
+#### Decisiones
+
+- **SMTP a mano y no `mail()`.** `mail()` depende de que el servidor tenga `sendmail`
+  configurado, y la mayoría de los hostings no lo tiene. PHPMailer resolvería lo mismo, pero el
+  TP3 va sin dependencias de terceros.
+- **Inyección de cabeceras.** El nombre y el correo del cliente van en las cabeceras `To` y
+  `Reply-To`: con un salto de línea adentro podrían agregar un `Bcc` a cualquiera. La validación
+  no los deja pasar, y [`Email`](pawprints/backend/src/Core/Email.php) rechaza igual cualquier
+  cabecera que tenga uno.
+- **Abuso del formulario.** Como el sitio le manda un correo a la dirección que se escriba, el
+  formulario podría usarse para mandarle correos a terceros. Por eso la confirmación no repite
+  los comentarios, y un campo oculto hace de trampa para bots: si llega completo, la reserva se
+  descarta sin avisarle al bot.
+- **Datos personales.** El log registra el libro y la cantidad de cada reserva, pero no el nombre,
+  el correo ni el teléfono.
+- **Catálogo.** La reserva depende de
+  [`CatalogoDeLibros`](pawprints/backend/src/Models/CatalogoDeLibros.php), una interfaz con
+  `todos()` y `porId()` que implementa el repositorio de libros del punto 4.
 
 ## Entorno de desarrollo
 

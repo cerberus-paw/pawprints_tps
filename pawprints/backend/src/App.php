@@ -7,12 +7,16 @@ namespace PawPrints;
 use LogicException;
 use PawPrints\Core\Config;
 use PawPrints\Core\Controller;
+use PawPrints\Core\FileMailer;
 use PawPrints\Core\HttpException;
 use PawPrints\Core\Logger;
+use PawPrints\Core\Mailer;
 use PawPrints\Core\Request;
 use PawPrints\Core\Response;
 use PawPrints\Core\Router;
+use PawPrints\Core\SmtpMailer;
 use PawPrints\Core\View;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -26,6 +30,7 @@ final class App
         private readonly View $view,
         private readonly Config $config,
         private readonly Logger $logger,
+        private readonly Mailer $mailer,
     ) {
     }
 
@@ -60,7 +65,44 @@ final class App
         $declareRoutes = require $backendDir . '/routes.php';
         $declareRoutes($router);
 
-        return new self($router, new View($backendDir . '/views'), $config, $logger);
+        return new self(
+            $router,
+            new View($backendDir . '/views'),
+            $config,
+            $logger,
+            self::mailer($config, $backendDir),
+        );
+    }
+
+    /**
+     * El transporte de los correos sale de correo.transporte: «archivo» en desarrollo, para no
+     * mandar nada de verdad, y «smtp» en el servidor publicado.
+     */
+    private static function mailer(Config $config, string $backendDir): Mailer
+    {
+        $from = (string) $config->get('correo.remitente', '');
+        if ($from === '') {
+            throw new RuntimeException('Falta correo.remitente en config.ini.');
+        }
+        $fromName = (string) $config->get('correo.nombre', 'PAWPrints');
+
+        return match ($transport = $config->get('correo.transporte', 'archivo')) {
+            'archivo' => new FileMailer(
+                $backendDir . '/' . $config->get('correo.carpeta', 'logs/correos'),
+                $from,
+                $fromName,
+            ),
+            'smtp' => new SmtpMailer(
+                (string) $config->get('smtp.servidor', ''),
+                (int) $config->get('smtp.puerto', 587),
+                (string) $config->get('smtp.seguridad', 'tls'),
+                (string) $config->get('smtp.usuario', ''),
+                (string) $config->get('smtp.clave', ''),
+                $from,
+                $fromName,
+            ),
+            default => throw new RuntimeException("correo.transporte tiene que ser «archivo» o «smtp», no «{$transport}»."),
+        };
     }
 
     public function handle(Request $request): Response
@@ -101,7 +143,7 @@ final class App
     private function dispatch(array $action, Request $request): Response
     {
         [$class, $method] = $action;
-        $response = (new $class($this->view, $this->config, $this->logger))->$method($request);
+        $response = (new $class($this->view, $this->config, $this->logger, $this->mailer))->$method($request);
         if (!$response instanceof Response) {
             throw new LogicException("{$class}::{$method} tiene que devolver una Response.");
         }
