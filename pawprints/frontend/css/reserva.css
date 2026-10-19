@@ -187,6 +187,39 @@
   border-color: #C0392B;
 }
 
+/* Los errores que encontró el servidor: el campo llega con aria-invalid
+   y su mensaje, en un <p id="error-…">, justo debajo. */
+.page-reserva main form [aria-invalid="true"] {
+  border-color: #C0392B;
+}
+
+.page-reserva main form p[id^="error-"] {
+  font-size: var(--text-sm);
+  color: #C0392B;
+}
+
+/* El resumen de errores (o el aviso de que no salió la reserva), arriba
+   del formulario. */
+.page-reserva main article > [role="alert"] {
+  background: #FDF0EE;
+  border: 1px solid #C0392B;
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-6);
+  font-size: var(--text-sm);
+  color: var(--dark);
+}
+
+.page-reserva main article > [role="alert"] ul {
+  margin-top: var(--sp-2);
+  padding-left: var(--sp-5);
+  list-style: disc;
+}
+
+.page-reserva main article > [role="alert"] a {
+  color: #A93226;
+}
+
 .page-reserva main form textarea {
   resize: vertical;
   min-height: 7rem;
@@ -407,5 +440,61 @@
 
   .page-reserva main form input[type="number"] {
     max-width: 100%;
+  }
+}
+
+/* ================================================================
+   6. CONFIRMACIÓN DE LA RESERVA
+   Una sola tarjeta, con el mismo fondo y borde que el formulario.
+   ================================================================ */
+.page-reserva-confirmacion {
+  background: var(--cream);
+}
+
+.page-reserva-confirmacion main {
+  max-width: calc(48rem + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: var(--sp-16) var(--gutter);
+}
+
+.page-reserva-confirmacion main > section {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-10);
+}
+
+.page-reserva-confirmacion main h1 {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin-bottom: var(--sp-4);
+}
+
+.page-reserva-confirmacion main p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin-bottom: var(--sp-3);
+}
+
+.page-reserva-confirmacion main ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-6);
+}
+
+.page-reserva-confirmacion main a {
+  color: var(--v700);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .page-reserva-confirmacion main {
+    padding: var(--sp-10) var(--gutter);
+  }
+
+  .page-reserva-confirmacion main > section {
+    padding: var(--sp-6);
   }
 }
