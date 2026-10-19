@@ -1,0 +1,201 @@
+/* ================================================================
+   PAWPrints — Librería
+   error.css: Estilos específicos de la página de error (404, 405, 500)
+   ================================================================ */
+
+/* Fondo cálido de borde a borde, como en reserva: la página de error es
+   corta y sobre blanco quedaba flotando. */
+.page-error {
+  background: var(--cream);
+}
+
+.page-error main {
+  max-width: calc(var(--max-w) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: var(--sp-20) var(--gutter);
+}
+
+/* ================================================================
+   1. EL ERROR (estado, título, mensaje y por dónde seguir)
+   ================================================================ */
+
+.page-error main > section:first-of-type {
+  max-width: 44rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* El número del estado, grande y en violeta claro: ubica de qué error se
+   trata sin competir con el título, que es lo que hay que leer. */
+.page-error main > section:first-of-type > p:first-child data {
+  font-family: var(--font-serif);
+  font-size: var(--text-hero);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--v500);
+  display: block;
+}
+
+.page-error main > section:first-of-type h1 {
+  font-size: var(--text-4xl);
+  color: var(--v800);
+  margin-block: var(--sp-3) var(--sp-4);
+}
+
+.page-error main > section:first-of-type > p:nth-of-type(2) {
+  font-size: var(--text-lg);
+  color: var(--muted);
+}
+
+/* ── Los tres enlaces para seguir navegando ─────────────────────── */
+.page-error main > section:first-of-type nav {
+  margin-top: var(--sp-10);
+}
+
+.page-error main > section:first-of-type nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-3);
+}
+
+.page-error main > section:first-of-type nav a {
+  display: inline-block;
+  padding: var(--sp-3) var(--sp-6);
+  border: 1px solid var(--border-v);
+  border-radius: var(--r-md);
+  background: var(--white);
+  font-weight: 600;
+  color: var(--v700);
+  transition: background var(--ease), color var(--ease), box-shadow var(--ease);
+}
+
+/* El primero es el camino esperado (volver al inicio), así que va lleno */
+.page-error main > section:first-of-type nav li:first-child a {
+  background: var(--v700);
+  border-color: var(--v700);
+  color: var(--white);
+}
+
+.page-error main > section:first-of-type nav a:hover,
+.page-error main > section:first-of-type nav a:focus-visible {
+  background: var(--v600);
+  border-color: var(--v600);
+  color: var(--white);
+  box-shadow: var(--sh-sm);
+}
+
+/* ── La referencia del error (sólo en los 5xx) ───────────────────── */
+.page-error main > section:first-of-type > p:last-child {
+  margin-top: var(--sp-8);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.page-error main > section:first-of-type > p:last-child data {
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  letter-spacing: 0.08em;
+  background: var(--v50);
+  border: 1px solid var(--border-v);
+  border-radius: var(--r-sm);
+  padding: 0 var(--sp-2);
+  color: var(--v800);
+  user-select: all; /* un clic selecciona los seis dígitos enteros */
+}
+
+/* ================================================================
+   2. DETALLE TÉCNICO (sólo con app.entorno = "desarrollo")
+   Caja aparte y de aspecto distinto al resto del sitio: tiene que
+   quedar claro de un vistazo que esto no es parte de la página.
+   ================================================================ */
+
+.page-error main > section:nth-of-type(2) {
+  max-width: 60rem;
+  margin: var(--sp-16) auto 0;
+  padding: var(--sp-6);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--v500);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-sm);
+}
+
+.page-error main > section:nth-of-type(2) h2 {
+  font-size: var(--text-xl);
+  color: var(--v800);
+}
+
+.page-error main > section:nth-of-type(2) > p {
+  margin-block: var(--sp-2) var(--sp-5);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.page-error main > section:nth-of-type(2) dl {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  gap: var(--sp-2) var(--sp-5);
+  align-items: baseline;
+  margin-bottom: var(--sp-5);
+}
+
+.page-error main > section:nth-of-type(2) dt {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.page-error main > section:nth-of-type(2) dd {
+  font-size: var(--text-sm);
+  /* Una clase con namespace o una ruta larga no pueden ensanchar la caja */
+  overflow-wrap: anywhere;
+}
+
+.page-error main > section:nth-of-type(2) code {
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+/* La traza: tipografía monoespaciada, con barra propia y altura acotada,
+   para que no empuje el pie de página a varias pantallas de distancia. */
+.page-error main > section:nth-of-type(2) pre {
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--sp-4);
+  background: var(--v900);
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: #E8DCF5;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ================================================================
+   3. RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 600px) {
+  .page-error main {
+    padding-block: var(--sp-12);
+  }
+
+  .page-error main > section:first-of-type > p:first-child data {
+    font-size: var(--text-4xl);
+  }
+
+  .page-error main > section:first-of-type h1 {
+    font-size: var(--text-2xl);
+  }
+
+  /* Apilados y a lo ancho: tres botones en fila no entran en un teléfono */
+  .page-error main > section:first-of-type nav ul {
+    flex-direction: column;
+  }
+
+  .page-error main > section:nth-of-type(2) dl {
+    grid-template-columns: 1fr;
+    gap: var(--sp-1) 0;
+  }
+}
