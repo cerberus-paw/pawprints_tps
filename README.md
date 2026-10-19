@@ -402,6 +402,67 @@ se eligen en `config.ini`:
   [`CatalogoDeLibros`](pawprints/backend/src/Models/CatalogoDeLibros.php), una interfaz con
   `todos()` y `porId()` que implementa el repositorio de libros del punto 4.
 
+### 6. Errores
+
+Todo error del sitio termina en la misma página, con el menú y el pie en su lugar, y con el estado
+HTTP que corresponde:
+
+| Estado | Cuándo | Qué dice |
+| --- | --- | --- |
+| `404` | Una ruta que no existe, un libro o una página del catálogo inexistentes | «Página no encontrada», con el mensaje de quien lanzó el error («No encontramos ese libro») |
+| `405` | La ruta existe, pero con otro método (un `POST /catalogo`). Lleva la cabecera `Allow` | «Ese pedido no se puede hacer acá» |
+| `500` | Cualquier error nuestro | «Algo se rompió de nuestro lado», con una referencia para encontrarlo en el log |
+
+[`App::errorResponse()`](pawprints/backend/src/App.php) es el único lugar por donde salen: elige
+el estado, registra lo que haya que investigar y arma la página con la vista
+[`error`](pawprints/backend/views/error.view.php) y
+[`css/error.css`](pawprints/frontend/css/error.css). Los mensajes de cada estado están en
+`App::MENSAJES`, y una [`HttpException`](pawprints/backend/src/Core/HttpException.php) puede traer
+el suyo, más preciso.
+
+**Lo que el cliente no ve.** Con `app.entorno = "produccion"` en
+[`config.ini`](pawprints/backend/config/config.example.ini), la página de error no tiene más que el
+estado, el mensaje y la referencia: ni la clase de la excepción, ni el archivo, ni la línea, ni la
+traza, ni una ruta del servidor. Todo eso va a `logs/app.log`, que está fuera de la raíz pública y
+no se puede pedir por URL. Con `app.entorno = "desarrollo"`, la misma página agrega el detalle
+abajo, para no tener que ir a buscar el log en cada vuelta.
+
+**Lo que PHP no manda por ese camino.**
+[`Core/ErrorHandler`](pawprints/backend/src/Core/ErrorHandler.php) se registra antes de que la
+aplicación arranque y tapa los tres agujeros que quedaban:
+
+| | Antes | Ahora |
+| --- | --- | --- |
+| Un aviso (`Undefined array key`, una división por cero) | Se imprimía en medio del HTML con la ruta del archivo | Se convierte en `ErrorException` y sale como cualquier otro error, por la página de error |
+| Una excepción fuera del pedido (falta `config.ini`) | El error de PHP, en pantalla | Al log, y un `500` genérico |
+| Un fatal (memoria agotada, un `require` que no existe) | Lo imprimía PHP y terminaba | Al log, y un `500` en texto plano |
+
+#### Decisiones
+
+- **`display_errors` apagado siempre, en los dos entornos.** Cuánto se muestra lo decide la página
+  de error, que sabe escapar lo que imprime y dónde ponerlo; un aviso impreso por PHP sale en
+  cualquier parte del HTML. De paso, el manejo de errores no depende del `php.ini` del servidor
+  donde se publique, que es el punto 7.
+- **En producción el detalle no se oculta: no se genera.** Esconderlo con CSS lo deja igual en el
+  código fuente, a un «ver código» de distancia.
+- **Una referencia de seis dígitos.** La misma que se le muestra a la persona queda en la entrada
+  del log, así se puede encontrar el error del que vino a hablar sin pedirle que explique nada. No
+  dice nada por sí sola, y por eso puede mostrarse.
+- **Un `4xx` no se registra aparte.** Es parte del uso normal del sitio —un enlace viejo, una
+  dirección escrita a mano— y ya queda en la línea que `App::handle()` escribe por cada pedido. Un
+  `5xx` sí, con la traza.
+- **El fatal responde en texto plano.** Cuando se llega al manejador de apagado, puede haber sido
+  justamente la vista, el autoload o el logger lo que falló: ese `500` no usa nada del núcleo, para
+  no fallar mientras se responde un error. Antes descarta los búferes abiertos, así no sale media
+  página pegada al mensaje.
+- **El `@` se respeta.**
+  [`Config`](pawprints/backend/src/Core/Config.php) y
+  [`Logger`](pawprints/backend/src/Core/Logger.php) lo usan a propósito para encargarse ellos del
+  `.ini` mal escrito o del log sin permisos, así que un aviso silenciado no se convierte en
+  excepción.
+- **Lo que un controlador imprima por su cuenta** (un `var_dump` olvidado) se muestra en desarrollo
+  y se descarta en producción: nadie revisó qué tiene adentro.
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
