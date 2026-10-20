@@ -10,7 +10,7 @@ estado con el que se entregó.
 | --- | --- | --- |
 | [TP1](#tp1--maquetado-web) | Maquetado con HTML5 | `tp1` |
 | [TP2](#tp2--estilos) | Identidad visual y CSS | `tp2` |
-| [TP3](#tp3--programación-backend-1) | Backend en PHP con MVC | `tp3` |
+| [TP3](#tp3--programación-backend-1) | Backend en PHP con MVC | `TP3-v3.0.0` |
 
 ## Estructura del repositorio
 
@@ -473,6 +473,91 @@ aplicación arranque y tapa los tres agujeros que quedaban:
   excepción.
 - **Lo que un controlador imprima por su cuenta** (un `var_dump` olvidado) se muestra en desarrollo
   y se descarta en producción: nadie revisó qué tiene adentro.
+
+### 7. Publicación
+
+> Publique su aplicación web de forma que sea accesible a través de Internet.
+
+**<https://3-23-199-91.sslip.io>**, con HTTPS (certificado de Let's Encrypt) y la versión `3.0.0`.
+`sslip.io` es un DNS público que resuelve `3-23-199-91.sslip.io` a la IP `3.23.199.91`, la IP fija
+(Elastic IP) del servidor, así que el sitio tiene nombre sin registrar un dominio.
+
+| | |
+| --- | --- |
+| Servidor | Instancia EC2 de AWS (`t3.micro`, 1 GB, región `us-east-2`), con IP elástica |
+| Sistema operativo | Ubuntu 26.04.1 LTS |
+| Software | Apache 2.4 con `mod_php`, PHP 8.5, Git y Certbot (los paquetes de Ubuntu) |
+| Red | Security group con el 22 (SSH), el 80 y el 443; el 80 redirige a HTTPS |
+| Sistema | SSH sólo con clave, `fail2ban` en el SSH y actualizaciones de seguridad automáticas |
+
+Comandos que se corrieron en el servidor, como `ubuntu`:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y apache2 libapache2-mod-php php-cli git certbot python3-certbot-apache fail2ban unattended-upgrades
+
+sudo git clone --branch TP3 https://github.com/mnomico/paw_tps.git /var/www/pawprints
+cd /var/www/pawprints
+sudo cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
+sudo chown -R www-data:www-data pawprints/backend/logs
+```
+
+Archivos de configuración que se modificaron:
+
+| Archivo | Cambio |
+| --- | --- |
+| `pawprints/backend/config/config.ini` | Copia del ejemplo, que ya trae `entorno = "produccion"`. Para el correo, `transporte = "smtp"` y, en `[smtp]`, `usuario` y `clave` (una contraseña de aplicación de Gmail); `[correo] remitente` tiene que ser esa misma cuenta |
+| `/etc/apache2/sites-available/pawprints.conf` | El sitio, que reemplaza al de Apache por defecto (`a2dissite 000-default`, `a2ensite pawprints`) |
+| `/etc/php/8.5/apache2/conf.d/99-pawprints.ini` | `pcre.jit=0` |
+| `/etc/apache2/conf-available/seguridad-pawprints.conf` | `ServerTokens Prod` y `ServerSignature Off`, para que Apache no diga su versión |
+
+El sitio de Apache, con `frontend/` como raíz pública (el backend, la configuración y los logs
+quedan afuera) y el front controller atendiendo todo lo que no sea un archivo:
+
+```apache
+<VirtualHost *:80>
+    ServerName 3-23-199-91.sslip.io
+    DocumentRoot /var/www/pawprints/pawprints/frontend
+    <Directory /var/www/pawprints/pawprints/frontend>
+        Require all granted
+        Options -Indexes
+        FallbackResource /index.php
+    </Directory>
+</VirtualHost>
+```
+
+`pcre.jit=0` es necesario en este sistema: Apache corre con la escritura y la ejecución de memoria
+separadas, y el JIT de las expresiones regulares no puede reservar memoria ejecutable. Sin esa
+línea, PHP avisa, el manejador de errores del [punto 6](#6-errores) lo convierte en excepción y
+todas las rutas dan `500`.
+
+HTTPS y el redireccionamiento desde el puerto 80 los configura Certbot, que además renueva el
+certificado solo:
+
+```bash
+sudo a2dissite 000-default && sudo a2ensite pawprints && sudo a2enmod headers
+sudo certbot --apache -d 3-23-199-91.sslip.io --redirect
+```
+
+En el sitio con HTTPS se agregan las cabeceras `Strict-Transport-Security` y
+`X-Content-Type-Options: nosniff`.
+
+Para actualizar el sitio con una versión nueva:
+
+```bash
+cd /var/www/pawprints && sudo git pull --ff-only
+```
+
+Cómo se comprobó que anda (desde otra máquina):
+
+```bash
+curl -sI http://3-23-199-91.sslip.io/               # 301 a https
+for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /libros/1 /reserva; do
+  printf '%-22s %s\n' "$r" "$(curl -s -o /dev/null -w '%{http_code}' "https://3-23-199-91.sslip.io$r")"
+done                                                 # todas 200
+curl -s -o /dev/null -w '%{http_code}\n' https://3-23-199-91.sslip.io/libros/9999   # 404
+curl -s -o /dev/null -w '%{http_code}\n' https://3-23-199-91.sslip.io/backend/config/config.ini   # 404
+```
 
 ## Entorno de desarrollo
 
