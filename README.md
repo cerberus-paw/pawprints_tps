@@ -10,7 +10,7 @@ estado con el que se entregó.
 | --- | --- | --- |
 | [TP1](#tp1--maquetado-web) | Maquetado con HTML5 | `tp1` |
 | [TP2](#tp2--estilos) | Identidad visual y CSS | `tp2` |
-| [TP3](#tp3--programación-backend-1) | Backend en PHP con MVC | `tp3` |
+| [TP3](#tp3--programación-backend-1) | Backend en PHP con MVC | `TP3-v3.0.0` |
 
 ## Estructura del repositorio
 
@@ -28,28 +28,46 @@ Las cinco maquetas del TP2: [inicio](pawprints/frontend/index.html) · [catálog
 
 ## Cómo levantar el sitio
 
-HTML y CSS estáticos: no requiere compilación, base de datos ni dependencias, y no hay archivos
-de configuración que modificar.
+Requisitos: **PHP 8.1 o superior** (con el servidor web incorporado y la extensión `openssl`, que
+trae cualquier instalación común) y **Git**. No hay base de datos, ni Composer, ni dependencias
+que instalar: los libros están en [`data/libros.json`](pawprints/backend/data/libros.json).
 
 ```bash
-git clone https://github.com/mnomico/paw_tps.git
-cd paw_tps/pawprints
-python3 -m http.server 8080
+git clone https://github.com/cerberus-paw/pawprints_tps.git
+cd pawprints_tps
+cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
+php -S localhost:8080 -t pawprints/frontend
 ```
 
-Abrir <http://localhost:8080/index.html>. Para detener el servidor, `Ctrl+C`.
+Abrir <http://localhost:8080/>. Para detener el servidor, `Ctrl+C`.
 
-También se pueden abrir los archivos directamente, sin servidor, con `xdg-open index.html`
-(Linux), `open` (macOS) o `start` (Windows).
+El único archivo de configuración es `pawprints/backend/config/config.ini` (el ejemplo, copiado):
 
-Para verificar que las cinco páginas responden `200`:
+| Clave | Para qué | Valor para trabajar en una máquina propia |
+| --- | --- | --- |
+| `app.entorno` | Cuánto detalle de un error ve el cliente | El ejemplo trae `"produccion"`. Con `"desarrollo"` la página de error agrega el detalle |
+| `correo.transporte` | Qué se hace con cada correo | `"archivo"`, que viene por defecto: los guarda como `.eml` en `pawprints/backend/logs/correos/` en lugar de mandarlos |
+| `correo.reservas` | A quién le llega el aviso de cada reserva | Cualquier dirección |
+| `smtp.*` | Servidor, usuario y contraseña, sólo con `transporte = "smtp"` | Vacío |
+
+Si el puerto 8080 está ocupado, se usa otro en el mismo comando (`php -S localhost:8090 …`).
+El servidor, el log (`pawprints/backend/logs/app.log`) y los correos quedan en la carpeta del
+repositorio: no hace falta crear ni dar permisos a nada.
+
+Para verificar que las rutas responden lo que corresponde (con el servidor andando):
 
 ```bash
-for f in *.html; do
-  printf '%-26s %s\n' "$f" \
-    "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080/$f")"
+for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /libros/1 /reserva \
+         /libros/9999 /xyz; do
+  printf '%-22s %s\n' "$r" "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$r")"
 done
 ```
+
+Las siete primeras responden `200` y las dos últimas, `404`. Para ver una reserva de punta a punta,
+completar el formulario en <http://localhost:8080/reserva>: el aviso al personal y la confirmación
+quedan como dos `.eml` en `pawprints/backend/logs/correos/`.
+
+Para publicarlo en un servidor, ver el [punto 7 del TP3](#7-publicación).
 
 ## TP1 — Maquetado web
 
@@ -266,15 +284,9 @@ en el log.
   entregó entonces, pero ya ninguna ruta las usa: las cinco pantallas se sirven desde su
   controlador. El `MaquetaController` provisorio se borró junto con sus rutas.
 
-Requiere PHP 8.1 o superior. Para probarlo desde la raíz del repositorio:
-
-```bash
-cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
-php -S localhost:8080 -t pawprints/frontend
-```
-
-El ejemplo viene con `entorno = "produccion"`. Para ver el detalle de los errores mientras se
-trabaja, cambiarlo a `"desarrollo"` en `config.ini`.
+Requiere PHP 8.1 o superior. Los pasos para levantarlo están en [Cómo levantar el
+sitio](#cómo-levantar-el-sitio). El ejemplo de `config.ini` viene con `entorno = "produccion"`: para
+ver el detalle de los errores mientras se trabaja, cambiarlo a `"desarrollo"`.
 
 ### 4. Catálogo
 
@@ -474,15 +486,100 @@ aplicación arranque y tapa los tres agujeros que quedaban:
 - **Lo que un controlador imprima por su cuenta** (un `var_dump` olvidado) se muestra en desarrollo
   y se descarta en producción: nadie revisó qué tiene adentro.
 
+### 7. Publicación
+
+> Publique su aplicación web de forma que sea accesible a través de Internet.
+
+**<https://3-23-199-91.sslip.io>**, con HTTPS (certificado de Let's Encrypt) y la versión `3.0.0`.
+`sslip.io` es un DNS público que resuelve `3-23-199-91.sslip.io` a la IP `3.23.199.91`, la IP fija
+(Elastic IP) del servidor, así que el sitio tiene nombre sin registrar un dominio.
+
+| | |
+| --- | --- |
+| Servidor | Instancia EC2 de AWS (`t3.micro`, 1 GB, región `us-east-2`), con IP elástica |
+| Sistema operativo | Ubuntu 26.04.1 LTS |
+| Software | Apache 2.4 con `mod_php`, PHP 8.5, Git y Certbot (los paquetes de Ubuntu) |
+| Red | Security group con el 22 (SSH), el 80 y el 443; el 80 redirige a HTTPS |
+| Sistema | SSH sólo con clave, `fail2ban` en el SSH y actualizaciones de seguridad automáticas |
+
+Comandos que se corrieron en el servidor, como `ubuntu`:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y apache2 libapache2-mod-php php-cli git certbot python3-certbot-apache fail2ban unattended-upgrades
+
+sudo git clone --branch TP3 https://github.com/mnomico/paw_tps.git /var/www/pawprints
+cd /var/www/pawprints
+sudo cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
+sudo chown -R www-data:www-data pawprints/backend/logs
+```
+
+Archivos de configuración que se modificaron:
+
+| Archivo | Cambio |
+| --- | --- |
+| `pawprints/backend/config/config.ini` | Copia del ejemplo, que ya trae `entorno = "produccion"`. Para el correo, `transporte = "smtp"` y, en `[smtp]`, `usuario` y `clave` (una contraseña de aplicación de Gmail); `[correo] remitente` tiene que ser esa misma cuenta |
+| `/etc/apache2/sites-available/pawprints.conf` | El sitio, que reemplaza al de Apache por defecto (`a2dissite 000-default`, `a2ensite pawprints`) |
+| `/etc/php/8.5/apache2/conf.d/99-pawprints.ini` | `pcre.jit=0` |
+| `/etc/apache2/conf-available/seguridad-pawprints.conf` | `ServerTokens Prod` y `ServerSignature Off`, para que Apache no diga su versión |
+
+El sitio de Apache, con `frontend/` como raíz pública (el backend, la configuración y los logs
+quedan afuera) y el front controller atendiendo todo lo que no sea un archivo:
+
+```apache
+<VirtualHost *:80>
+    ServerName 3-23-199-91.sslip.io
+    DocumentRoot /var/www/pawprints/pawprints/frontend
+    <Directory /var/www/pawprints/pawprints/frontend>
+        Require all granted
+        Options -Indexes
+        FallbackResource /index.php
+    </Directory>
+</VirtualHost>
+```
+
+`pcre.jit=0` es necesario en este sistema: Apache corre con la escritura y la ejecución de memoria
+separadas, y el JIT de las expresiones regulares no puede reservar memoria ejecutable. Sin esa
+línea, PHP avisa, el manejador de errores del [punto 6](#6-errores) lo convierte en excepción y
+todas las rutas dan `500`.
+
+HTTPS y el redireccionamiento desde el puerto 80 los configura Certbot, que además renueva el
+certificado solo:
+
+```bash
+sudo a2dissite 000-default && sudo a2ensite pawprints && sudo a2enmod headers
+sudo certbot --apache -d 3-23-199-91.sslip.io --redirect
+```
+
+En el sitio con HTTPS se agregan las cabeceras `Strict-Transport-Security` y
+`X-Content-Type-Options: nosniff`.
+
+Para actualizar el sitio con una versión nueva:
+
+```bash
+cd /var/www/pawprints && sudo git pull --ff-only
+```
+
+Cómo se comprobó que anda (desde otra máquina):
+
+```bash
+curl -sI http://3-23-199-91.sslip.io/               # 301 a https
+for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /libros/1 /reserva; do
+  printf '%-22s %s\n' "$r" "$(curl -s -o /dev/null -w '%{http_code}' "https://3-23-199-91.sslip.io$r")"
+done                                                 # todas 200
+curl -s -o /dev/null -w '%{http_code}\n' https://3-23-199-91.sslip.io/libros/9999   # 404
+curl -s -o /dev/null -w '%{http_code}\n' https://3-23-199-91.sslip.io/backend/config/config.ini   # 404
+```
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
 | --- | --- |
 | Sistema operativo | CachyOS (Arch Linux), kernel 7.2.2 |
 | Navegador | Mozilla Firefox 155.0 |
-| Servidor de pruebas | Python 3.14.7 (`http.server`) |
+| Servidor de pruebas | PHP 8.5.11 (`php -S`) |
 | Control de versiones | Git 2.55.0 |
 | Wireframes · SiteMap | Figma · Whimsical |
 
-Al ser HTML y CSS estáticos, el sitio funciona en cualquier navegador moderno y con cualquier
-servidor de archivos estáticos.
+El sitio se sirve con PHP (el servidor incorporado en desarrollo, Apache en el servidor publicado)
+y funciona en cualquier navegador moderno. Las maquetas del TP2 siguen siendo HTML y CSS estáticos.
