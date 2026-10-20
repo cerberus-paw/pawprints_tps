@@ -1,5 +1,5 @@
 Programación en Ambiente Web (11086) — UNLu
-Trabajo Práctico Nº 1 — Maquetado Web
+PAWPrints — Trabajos Prácticos
 
 Integrantes del grupo:
 
@@ -8,3 +8,4 @@ Nombre    Apellido   Legajo
 Tomás     Resnik     190168
 Mateo     Nomico     168102
 Salvador  Baez       195157
+Agustina  Ortiz      199523
