@@ -52,19 +52,21 @@ El único archivo de configuración es `pawprints/backend/config/config.ini` (el
 | `smtp.*` | Servidor, usuario y contraseña, sólo con `transporte = "smtp"` | Vacío |
 
 Si el puerto 8080 está ocupado, se usa otro en el mismo comando (`php -S localhost:8090 …`).
-El servidor, el log (`pawprints/backend/logs/app.log`) y los correos quedan en la carpeta del
-repositorio: no hace falta crear ni dar permisos a nada.
+El servidor, el log (`pawprints/backend/logs/app.log`), los correos y las tapas que se cargan en
+<http://localhost:8080/libros/nuevo> (`pawprints/frontend/img/tapas/`) quedan en la carpeta del
+repositorio: no hace falta crear ni dar permisos a nada. Tampoco hay que tocar la configuración de
+PHP: la tapa acepta hasta 2 MB, que es el `upload_max_filesize` que trae por defecto.
 
 Para verificar que las rutas responden lo que corresponde (con el servidor andando):
 
 ```bash
-for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /catalogo/json /libros/1 /reserva \
-         /libros/9999 /xyz; do
+for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /catalogo/json /libros/1 /libros/nuevo \
+         /reserva /libros/9999 /xyz; do
   printf '%-22s %s\n' "$r" "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$r")"
 done
 ```
 
-Las siete primeras responden `200` y las dos últimas, `404`. Para ver una reserva de punta a punta,
+Las nueve primeras responden `200` y las dos últimas, `404`. Para ver una reserva de punta a punta,
 completar el formulario en <http://localhost:8080/reserva>: el aviso al personal y la confirmación
 quedan como dos `.eml` en `pawprints/backend/logs/correos/`.
 
@@ -713,6 +715,130 @@ Cómo se comporta:
   otra página: reenviarla no duplica nada.
 - **La tapa** se carga con el componente de arrastrar y soltar de la consigna 3.
 
+### 3. Tapas con arrastrar y soltar
+
+> Generar un componente que permita cargar, vía Drag and Drop, archivos de imagen de las tapas de los libros.
+
+La tapa del [formulario de libros nuevos](#2-formulario-de-libros-nuevos) se carga con el
+componente [`zona-arrastre.js`](pawprints/frontend/js/componentes/zona-arrastre.js), con sus
+estilos en [`libro-nuevo.css`](pawprints/frontend/css/libro-nuevo.css). Se usa con
+`new ZonaArrastre(contenedor)`, donde el contenedor tiene un `<input type="file">` común:
+
+```html
+<div class="campo campo-tapa" data-zona-arrastre>
+  <label for="tapa">Tapa del libro</label>
+  <input type="file" id="tapa" name="tapa" accept="image/jpeg,image/png,image/webp">
+</div>
+```
+
+| Qué hace | Cómo |
+| --- | --- |
+| Arrastrar y soltar | Escucha `dragenter`, `dragover`, `dragleave` y `drop` sobre la zona. El `preventDefault()` de `dragover` evita que el navegador abra la imagen. Mientras se arrastra, la zona se resalta |
+| Clic y teclado | Un clic, `Enter` o la barra espaciadora abren el selector de archivos del sistema |
+| Tipo y tamaño | Sólo JPG, PNG o WebP, hasta 2 MB. Si no, el error aparece en línea, igual que los de [`validador.js`](pawprints/frontend/js/componentes/validador.js), y el archivo no se toma |
+| Vista previa | La tapa se ve antes de enviar, con su nombre y su peso (`URL.createObjectURL`), y el botón «Quitar tapa» la descarta |
+| Envío | El archivo soltado se pasa al `<input>` con `DataTransfer` (`input.files = dt.files`), así viaja en el envío normal del formulario, que es `multipart/form-data` |
+
+En el servidor, [`Request`](pawprints/backend/src/Core/Request.php) suma `$_FILES` y
+[`LibroNuevo::validarTapa()`](pawprints/backend/src/Models/LibroNuevo.php) vuelve a controlar el
+tamaño y el tipo, este último con el contenido real del archivo (`finfo`) y no con lo que dice el
+navegador. Si pasa, [`LibroNuevoController`](pawprints/backend/src/Controllers/LibroNuevoController.php)
+la guarda en [`frontend/img/tapas/`](pawprints/frontend/img/tapas/) con un nombre aleatorio, y la
+ficha de la respuesta la muestra.
+
+#### Decisiones
+
+- **El componente no conoce el formulario de libros.** Sólo necesita el contenedor con el input,
+  así que se puede reusar en cualquier otro formulario. Los tipos, el tamaño y los mensajes se
+  pueden cambiar con atributos `data-*`.
+- **Sin JavaScript queda el input común.** El componente lo oculta visualmente pero no lo
+  reemplaza: sin el script se elige la tapa con el botón del navegador y el servidor la controla
+  igual.
+- **2 MB de máximo**, que es el `upload_max_filesize` que trae PHP por defecto: no hace falta
+  tocar la configuración de PHP para que ande.
+- **Un solo archivo.** Si se sueltan varios, toma el primero y avisa.
+- **Al volver con errores hay que elegir la tapa de nuevo.** Si otro campo tiene un error, el
+  navegador no conserva el archivo elegido en la página que devuelve el servidor, y la zona lo avisa.
+- **Las tapas subidas no se versionan.** La carpeta viene en el repositorio con un `.gitkeep`, y
+  Git ignora lo que tiene adentro.
+
+### 4. Filtros del catálogo
+
+> Implementar un componente que agregue funcionalidades de filtros a las búsquedas de libros que permitan ordenar los datos por varios criterios (en forma ascendente y descendente), buscar por rango de precio y que agregue la capacidad de paginar el contenido según la cantidad de elementos que desea ver el usuario (Paginado tradicional y / o scroll infinito). En esta primera etapa se cargarán todos los datos sin procesar desde el backend (la cantidad esperada es manejable de esta manera), y las funcionalidades serán 100% implementadas en JS.
+>
+> Nota: Prestar principal atención a los detalles de usabilidad en la versión Mobile.
+
+El [catálogo](pawprints/backend/views/catalogo.view.php) trae todos los libros una sola vez desde
+**`/catalogo/json`** y, desde ahí, busca, filtra, ordena y pagina en el navegador, sin recargar la
+página. Lo hace el componente [`filtros-catalogo.js`](pawprints/frontend/js/componentes/filtros-catalogo.js),
+que inicializa [la página](pawprints/frontend/js/paginas/catalogo.js) con `new FiltrosCatalogo(main)`.
+La ruta la atiende [`CatalogoController`](pawprints/backend/src/Controllers/CatalogoController.php)
+con `Response::json()`, y [`libros.json`](pawprints/backend/data/libros.json) pasó de 6 a 30 libros
+para que el paginado y los filtros se vean.
+
+| Pide el enunciado | Cómo se resolvió |
+| --- | --- |
+| Ordenar | Por título, autor y precio, ascendente y descendente, más «Recomendados», el orden del archivo |
+| Filtrar por precio | Campos «Desde» y «Hasta», en pesos e inclusivos. Si el mínimo supera al máximo, se avisa en línea y no se aplica |
+| Paginar | Tradicional, con números, «Anterior» y «Siguiente», y 4, 8, 12 o 24 libros por página a elección |
+| Usabilidad en el celular | En 900 px o menos, los filtros se pliegan detrás de un botón «Filtros» y los controles miden 44 × 44 px como mínimo |
+
+Además, la búsqueda, el género y el formato del TP3 también filtran sin recargar.
+
+Cómo se comporta:
+
+- Los botones de opción y los desplegables se aplican apenas cambian. La búsqueda y los precios,
+  cuando se deja de escribir (300 ms); `Enter` aplica al instante.
+- Cada cambio vuelve a la página 1, salvo que sea un cambio de página, y vuelve a dibujar las
+  tarjetas, el texto «Mostrando X–Y de Z» y el paginado.
+- La vista queda en la URL (`history.replaceState`) con los mismos parámetros que entiende el
+  servidor, así recargar o compartir el link muestra lo mismo. El link de descarga del CSV también
+  se actualiza.
+
+#### Decisiones
+
+- **Sin JavaScript, el catálogo sigue andando en el servidor.** El servidor entiende los mismos
+  órdenes y el mismo rango de precio, así que la página que imprime es la misma que dibuja el JS.
+  El componente toma el control recién cuando llega el JSON: si el pedido falla, la página sigue
+  recargando como en el TP3.
+- **Las tarjetas salen de un `<template>`** que imprime la vista, con la misma estructura que las
+  del servidor, así no se duplican los estilos. Se completan con `textContent`, nunca con
+  `innerHTML` con datos.
+- **Sólo paginado tradicional.** El enunciado deja el scroll infinito como alternativa («y/o»), y
+  la posición de un scroll infinito no entra bien en la URL.
+- **`replaceState` y no `pushState`.** El botón Atrás vuelve a la página anterior, no recorre cada
+  filtro que se probó.
+- **Accesibilidad.** El texto de resultados está en una región `aria-live`, así el lector de
+  pantalla anuncia cuántos libros quedaron. Al cambiar de página, el foco pasa al encabezado
+  «Resultados».
+
+### 5. Últimas búsquedas
+
+> Continuando el ejercicio de la búsqueda en el catálogo de libros de la práctica anterior, agregue la posibilidad de recordar las últimas 5 búsquedas realizadas por el usuario. Para ello, utilice la API de Local Storage. Si la cantidad de consultas es mayor a 5, debe eliminarse la más antigua.
+
+El componente [`historial-busquedas.js`](pawprints/frontend/js/componentes/historial-busquedas.js),
+con sus estilos en [`componentes.css`](pawprints/frontend/css/componentes.css), se engancha a los dos
+buscadores del sitio: el del encabezado y el del catálogo. Como el del encabezado está en todas las
+páginas, el [layout](pawprints/backend/views/layouts/header.php) lo carga siempre.
+
+- Al enviar una búsqueda, antes de que el navegador cambie de página, se guarda en Local Storage
+  bajo la clave `pawprints.busquedas`, como un arreglo JSON.
+- Se guardan **las últimas 5**: con una sexta se descarta la más vieja.
+- Al entrar en el buscador aparece debajo «Búsquedas recientes», con un link a cada una. Elegir
+  una repite la búsqueda. Se recorre con las flechas ↑ y ↓, `Esc` la cierra y «Borrar historial»
+  la vacía.
+
+#### Decisiones
+
+- **Una búsqueda repetida no se duplica**, sin importar mayúsculas y minúsculas: pasa a ser la más
+  reciente. Las búsquedas vacías no se guardan.
+- **Si el navegador no deja usar Local Storage**, como algunas ventanas privadas, el buscador sigue
+  andando, sin historial.
+- **Cada búsqueda reciente es un link** a `/catalogo?q=…`: se puede abrir en otra pestaña y anda
+  igual que buscar a mano.
+- **Sin el autocompletado del navegador.** El buscador lleva `autocomplete="off"` para que la lista
+  nativa no tape la propia.
+
 ### Publicación
 
 El TP4 está en la misma dirección que el TP3, **<https://3-23-199-91.sslip.io>**, y en el mismo
@@ -792,10 +918,10 @@ ls -l /var/www/pawprints/pawprints/frontend/img/tapas/   # la tapa, con dueño w
 
 | Componente | Versión |
 | --- | --- |
-| Sistema operativo | CachyOS (Arch Linux), kernel 7.2.2 |
-| Navegador | Mozilla Firefox 155.0 |
-| Servidor de pruebas | PHP 8.5.11 (`php -S`) |
-| Control de versiones | Git 2.55.0 |
+| Sistema operativo | CachyOS (Arch Linux), kernel 7.3.1 |
+| Navegador | Mozilla Firefox 159.0 |
+| Servidor de pruebas | PHP 8.5.12 (`php -S`) |
+| Control de versiones | Git 2.56.0 |
 | Wireframes · SiteMap | Figma · Whimsical |
 
 El sitio se sirve con PHP (el servidor incorporado en desarrollo, Apache en el servidor publicado)
