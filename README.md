@@ -1024,6 +1024,74 @@ seguían ahí.
 | Carga de libros | Título `Robert'); DROP TABLE libros; --`, autor `O'Connor` y resumen `' OR 1=1 --` | Se guardó el libro con esos textos tal cual |
 | Usuario `pawprints` en la consola de MySQL | `DROP TABLE libros`, `DELETE FROM reservas`, `UPDATE libros …`, `CREATE TABLE …`, `GRANT …` | «command denied» en todos |
 
+### 6. XSS
+
+> ¿Qué implica un ataque XSS? ¿Cómo puede evitarse? Realice las modificaciones necesarias en su aplicación para protegerse de dichos ataques.
+
+#### Qué implica
+
+En un ataque XSS (*cross-site scripting*) el atacante consigue que **su JavaScript se ejecute en
+el navegador de otra persona, dentro del sitio**. Pasa cuando la página muestra un dato sin
+escaparlo: si el dato trae `<script>` o un atributo como `onerror=`, el navegador no lo ve como
+texto sino como parte de la página, y lo ejecuta.
+
+Ese script corre con todo lo que el sitio puede hacer en ese navegador. En PAWPrints, si la víctima
+es alguien del personal, podría:
+
+- **Robarle la sesión**, leyendo la cookie y mandándosela al atacante, que entra como él.
+- **Leer lo que ve**: los nombres, correos y teléfonos de los clientes en el listado de pedidos.
+- **Hacer cosas en su nombre**: cargar un libro, o enviar cualquier formulario, porque el script
+  puede leer el token CSRF de la página.
+- **Cambiar la página**: un formulario falso de «volvé a ingresar» que le pide la contraseña.
+
+Hay tres tipos, según de dónde sale el script:
+
+| Tipo | Cómo llega | Ejemplo en PAWPrints |
+| --- | --- | --- |
+| **Reflejado** | Va en el pedido (la URL o un formulario) y la respuesta lo devuelve en la página. El atacante le pasa a la víctima un enlace armado | El buscador del catálogo repite lo que se buscó en el campo de búsqueda: `/catalogo?q="><script>…</script>` cerraría el `value` y agregaría el script |
+| **Almacenado** | Se guarda en la base y se muestra a todos los que ven esa página, sin que hagan nada raro | Los comentarios de una reserva los escribe cualquiera y los lee el personal en `/personal/pedidos`: un `<script>` en un comentario se ejecutaría con la sesión del personal |
+| **Basado en el DOM** | No pasa por el servidor: el propio JavaScript de la página toma un dato y lo mete en el HTML | Las búsquedas recientes se guardan en `localStorage` y el JS las vuelve a mostrar debajo del buscador. Si las escribiera con `innerHTML`, una búsqueda con `<img src=x onerror=…>` se ejecutaría cada vez que se abre el historial |
+
+#### Cómo se evita
+
+1. **Escapar al mostrar, según el contexto.** Lo que viene del usuario se escribe como texto:
+   `<` pasa a `&lt;`, `"` a `&quot;`, etc. El contexto importa: no es lo mismo el texto de un
+   párrafo, un atributo, una URL o el interior de un `<script>`. Se escapa al mostrar y no al
+   guardar, porque el mismo dato sale en lugares distintos (una página, un correo, un CSV).
+2. **En el JavaScript, `textContent` y no `innerHTML`.** `textContent` nunca interpreta HTML.
+3. **Content-Security-Policy.** Una cabecera que le dice al navegador de dónde puede cargar scripts,
+   estilos e imágenes. Sin `'unsafe-inline'`, un `<script>` o un `onerror=` que se haya colado en
+   el HTML no se ejecuta. Es la segunda barrera, por si falla la primera.
+4. **Cookies `HttpOnly`.** El JavaScript no puede leerlas, así que un XSS no se lleva la sesión.
+
+#### En PAWPrints
+
+- **Twig escapa todo por defecto.** [`View`](pawprints/backend/src/Core/View.php) usa
+  `autoescape` por extensión: en cada `.html.twig`, todo lo que se imprime con `{{ }}` sale
+  escapado para HTML. No hay ningún `|raw` en las vistas, y los datos van siempre en texto o en
+  atributos entre comillas, nunca dentro de un `<script>`. Los `href` empiezan con una ruta fija
+  (`/libros/…`) o con `mailto:`/`tel:`, así que un dato no puede volverlos un `javascript:`.
+  Los correos son texto plano (`.txt.twig`) y no se escapan, porque no se muestran como HTML.
+- **Los comentarios de las reservas** se ven en
+  [`personal/pedidos.html.twig`](pawprints/backend/views/personal/pedidos.html.twig) como texto,
+  con `|nl2br` *después* del escape para conservar los saltos de línea.
+- **El JavaScript no usa `innerHTML`.** Las tarjetas y el paginado del
+  [catálogo](pawprints/frontend/js/componentes/filtros-catalogo.js), las
+  [búsquedas recientes](pawprints/frontend/js/componentes/historial-busquedas.js) y los mensajes
+  del [validador](pawprints/frontend/js/componentes/validador.js) se escriben con `textContent`, y
+  la [zona de arrastre](pawprints/frontend/js/componentes/zona-arrastre.js), que era el único
+  `innerHTML`, se arma con `createElement`.
+- **Content-Security-Policy** en todas las respuestas, también en las de error
+  ([`App`](pawprints/backend/src/App.php)): sólo scripts del propio sitio, ninguno en línea, ni
+  estilos en línea, y `frame-ancestors 'none'` para que nadie muestre el sitio dentro de un
+  `iframe`. Va con `X-Content-Type-Options: nosniff`, para que el navegador no interprete como
+  página un JSON o un CSV que traiga HTML adentro.
+- **La cookie de sesión del personal es `HttpOnly`** (y `SameSite=Lax`, y `Secure` con HTTPS), en
+  [`Sesion`](pawprints/backend/src/Core/Sesion.php).
+- **El CSV** del catálogo le antepone un apóstrofo a las celdas que empiezan con `=`, `+`, `-` o
+  `@` ([`Csv`](pawprints/backend/src/Core/Csv.php)): es el mismo problema en otro contexto, una
+  planilla que tomaría un título como fórmula.
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
