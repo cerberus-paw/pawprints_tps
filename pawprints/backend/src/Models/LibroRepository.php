@@ -6,6 +6,7 @@ namespace PawPrints\Models;
 
 use PawPrints\Core\Database;
 use PDO;
+use PDOStatement;
 
 /**
  * El catálogo, guardado en la tabla libros de la base (TP5; hasta el TP4, en data/libros.json).
@@ -82,8 +83,9 @@ final class LibroRepository implements CatalogoDeLibros
     }
 
     /**
-     * Los libros que coinciden con la búsqueda y los filtros, ya ordenados. El paginado se aplica
-     * después, sobre este resultado, así el total de resultados se puede contar.
+     * Los libros que coinciden con la búsqueda y los filtros, ya ordenados. Con $limite, sólo esa
+     * página: el filtrado, el orden y el corte los hace la consulta, y no se trae el catálogo
+     * entero para filtrarlo en PHP. total() cuenta los mismos libros, para el paginado.
      *
      * Un filtro que no corresponde a nada del catálogo no es un error: deja la lista vacía, que es
      * lo que se le muestra a la persona. Un orden desconocido, en cambio, cae en el de por defecto.
@@ -95,42 +97,91 @@ final class LibroRepository implements CatalogoDeLibros
      * @param array{q?: string|null, genero?: string|null, formato?: string|null,
      *              precio_desde?: string|null, precio_hasta?: string|null,
      *              orden?: string|null} $filtros tal como llegan de la query
+     * @param int|null $limite cuántos libros traer, o null para todos (el CSV)
+     * @param int      $desde  cuántos saltear: (página - 1) × libros por página
      *
      * @return list<Libro>
      */
-    public function buscar(array $filtros = []): array
+    public function buscar(array $filtros = [], ?int $limite = null, int $desde = 0): array
     {
-        $buscado = self::normalizar((string) ($filtros['q'] ?? ''));
-        $genero = (string) ($filtros['genero'] ?? '');
-        $formato = (string) ($filtros['formato'] ?? '');
-        $minimo = self::monto($filtros['precio_desde'] ?? null);
-        $maximo = self::monto($filtros['precio_hasta'] ?? null);
-        if ($minimo !== null && $maximo !== null && $minimo > $maximo) {
-            $minimo = $maximo = null;
+        [$where, $parametros] = self::condiciones($filtros);
+        $sql = 'SELECT ' . self::COLUMNAS . " FROM libros{$where} ORDER BY "
+            . self::orden((string) ($filtros['orden'] ?? ''));
+
+        if ($limite !== null) {
+            // También como parámetros, y enteros: con las preparadas de verdad, MySQL no acepta
+            // un texto en el LIMIT.
+            $sql .= ' LIMIT :limite OFFSET :desde';
+            $parametros['limite'] = max(0, $limite);
+            $parametros['desde'] = max(0, $desde);
         }
 
-        $libros = array_values(array_filter($this->todos(), static function (array $libro) use (
-            $buscado,
-            $genero,
-            $formato,
-            $minimo,
-            $maximo,
-        ): bool {
-            if ($buscado !== '' && !str_contains(self::indice($libro), $buscado)) {
-                return false;
-            }
-            if ($genero !== '' && $libro['genero'] !== $genero) {
-                return false;
-            }
-            if ($formato !== '' && $libro['formato'] !== $formato) {
-                return false;
-            }
+        /** @var list<Libro> */
+        return $this->ejecutar($sql, $parametros)->fetchAll();
+    }
 
-            return ($minimo === null || $libro['precio'] >= $minimo)
-                && ($maximo === null || $libro['precio'] <= $maximo);
-        }));
+    /**
+     * Cuántos libros da buscar() con estos filtros, sin paginar.
+     *
+     * @param array<string, string|null> $filtros los mismos de buscar()
+     */
+    public function total(array $filtros = []): int
+    {
+        [$where, $parametros] = self::condiciones($filtros);
 
-        return self::ordenar($libros, (string) ($filtros['orden'] ?? ''));
+        return (int) $this->ejecutar("SELECT COUNT(*) FROM libros{$where}", $parametros)->fetchColumn();
+    }
+
+    /**
+     * El WHERE de la búsqueda y sus parámetros, que usan tanto la lista como el total. Lo que
+     * escribió el usuario va siempre como parámetro y nunca pegado en el SQL (TP5, consigna 4).
+     *
+     * @param array<string, string|null> $filtros
+     *
+     * @return array{0: string, 1: array<string, string|int>}
+     */
+    private static function condiciones(array $filtros): array
+    {
+        $condiciones = [];
+        $parametros = [];
+
+        $buscado = trim((string) ($filtros['q'] ?? ''));
+        if ($buscado !== '') {
+            // Todo lo que la búsqueda mira de un libro, junto, como en el TP3: el ISBN va dos
+            // veces, con y sin guiones, así se encuentra escrito de las dos formas. La
+            // intercalación de la base no distingue tildes ni mayúsculas, así que «ficcion»
+            // encuentra «Ficción» y «baez», «Báez».
+            $condiciones[] = "CONCAT_WS(' ', titulo, autor, genero, isbn, REPLACE(isbn, '-', '')) LIKE :q";
+            // El % y el _ que escribe el usuario buscan ese carácter, y no «cualquier cosa».
+            $parametros['q'] = '%' . addcslashes($buscado, '\\%_') . '%';
+        }
+
+        // El género y el formato tienen que ser exactamente uno de los del catálogo, como en el
+        // TP3: utf8mb4_bin distingue tildes y mayúsculas, que la intercalación de la base no.
+        foreach (['genero', 'formato'] as $campo) {
+            $valor = (string) ($filtros[$campo] ?? '');
+            if ($valor !== '') {
+                $condiciones[] = "{$campo} = :{$campo} COLLATE utf8mb4_bin";
+                $parametros[$campo] = $valor;
+            }
+        }
+
+        $minimo = self::monto($filtros['precio_desde'] ?? null);
+        $maximo = self::monto($filtros['precio_hasta'] ?? null);
+        if ($minimo === null || $maximo === null || $minimo <= $maximo) {
+            if ($minimo !== null) {
+                $condiciones[] = 'precio >= :minimo';
+                $parametros['minimo'] = $minimo;
+            }
+            if ($maximo !== null) {
+                $condiciones[] = 'precio <= :maximo';
+                $parametros['maximo'] = $maximo;
+            }
+        }
+
+        $where = $condiciones === [] ? '' : ' WHERE ' . implode(' AND ', $condiciones);
+
+        return [$where, $parametros];
     }
 
     /** Un monto en pesos de la query, o null si está vacío o no es un entero no negativo. */
@@ -146,37 +197,26 @@ final class LibroRepository implements CatalogoDeLibros
     }
 
     /**
-     * Ordena por título, autor o precio, en forma ascendente (`-asc`) o descendente (`-desc`). El
-     * autor va por el nombre tal como está escrito, no por apellido, y los textos se comparan sin
-     * tildes ni mayúsculas. usort es estable desde PHP 8.0: los empates quedan en el orden del
-     * catálogo. Un orden desconocido, «recomendados» incluido, deja el orden del catálogo.
-     *
-     * @param list<Libro> $libros
-     *
-     * @return list<Libro>
+     * El ORDER BY de un orden de la query: título, autor o precio, en forma ascendente (`-asc`) o
+     * descendente (`-desc`). Sale de esta lista cerrada porque una columna no se puede pasar como
+     * parámetro: lo que escribe el usuario elige una opción y nunca llega al SQL. El autor va por
+     * el nombre tal como está escrito, no por apellido, y los textos se comparan sin tildes ni
+     * mayúsculas. El id desempata, así los empates quedan en el orden del catálogo. Un orden
+     * desconocido, «recomendados» incluido, deja el orden del catálogo.
      */
-    private static function ordenar(array $libros, string $orden): array
+    private static function orden(string $orden): string
     {
-        $partes = explode('-', $orden);
-        if (count($partes) !== 2 || !in_array($partes[1], ['asc', 'desc'], true)) {
-            return $libros;
-        }
-        [$campo, $sentido] = $partes;
-
-        $clave = match ($campo) {
-            'titulo', 'autor' => static fn (array $libro): string =>
-                self::normalizar($libro[$campo]),
-            'precio' => static fn (array $libro): int => $libro['precio'],
-            default => null,
+        $columna = match ($orden) {
+            'titulo-asc' => 'titulo ASC, ',
+            'titulo-desc' => 'titulo DESC, ',
+            'autor-asc' => 'autor ASC, ',
+            'autor-desc' => 'autor DESC, ',
+            'precio-asc' => 'precio ASC, ',
+            'precio-desc' => 'precio DESC, ',
+            default => '',
         };
-        if ($clave === null) {
-            return $libros;
-        }
 
-        $signo = $sentido === 'asc' ? 1 : -1;
-        usort($libros, static fn (array $a, array $b): int => $signo * ($clave($a) <=> $clave($b)));
-
-        return $libros;
+        return $columna . 'id';
     }
 
     /**
@@ -187,7 +227,7 @@ final class LibroRepository implements CatalogoDeLibros
      */
     public function generos(): array
     {
-        return $this->contar('genero');
+        return $this->cuantosPor('genero');
     }
 
     /**
@@ -195,12 +235,13 @@ final class LibroRepository implements CatalogoDeLibros
      */
     public function formatos(): array
     {
-        return $this->contar('formato');
+        return $this->cuantosPor('formato');
     }
 
     /**
      * Otros libros para ofrecer en la ficha de uno: primero los del mismo género y después el
-     * resto, para que la lista llegue a $cantidad mientras haya catálogo.
+     * resto, para que la lista llegue a $cantidad mientras haya catálogo. Dentro de cada grupo,
+     * en el orden del catálogo.
      *
      * @param Libro $libro el que se está viendo, que queda afuera
      *
@@ -208,20 +249,12 @@ final class LibroRepository implements CatalogoDeLibros
      */
     public function recomendados(array $libro, int $cantidad = 3): array
     {
-        $otros = array_values(array_filter(
-            $this->todos(),
-            static fn (array $otro): bool => $otro['id'] !== $libro['id'],
-        ));
-
-        // usort es estable desde PHP 8.0: los del mismo género suben y el resto queda en el orden
-        // del catálogo.
-        usort(
-            $otros,
-            static fn (array $a, array $b): int => (int) ($b['genero'] === $libro['genero'])
-                <=> (int) ($a['genero'] === $libro['genero']),
-        );
-
-        return array_slice($otros, 0, $cantidad);
+        /** @var list<Libro> */
+        return $this->ejecutar(
+            'SELECT ' . self::COLUMNAS . ' FROM libros WHERE id <> :id'
+            . ' ORDER BY genero = :genero COLLATE utf8mb4_bin DESC, id LIMIT :cantidad',
+            ['id' => $libro['id'], 'genero' => $libro['genero'], 'cantidad' => max(0, $cantidad)],
+        )->fetchAll();
     }
 
     /**
@@ -230,7 +263,7 @@ final class LibroRepository implements CatalogoDeLibros
      *
      * @return array<string, int> valor => cuántos libros lo tienen, alfabético
      */
-    private function contar(string $campo): array
+    private function cuantosPor(string $campo): array
     {
         $filas = $this->pdo()
             ->query("SELECT {$campo}, COUNT(*) FROM libros GROUP BY {$campo} ORDER BY {$campo}")
@@ -248,48 +281,35 @@ final class LibroRepository implements CatalogoDeLibros
      */
     private function uno(string $sql, array $parametros): ?array
     {
-        $consulta = $this->pdo()->prepare($sql);
-        $consulta->execute($parametros);
-        $libro = $consulta->fetch();
+        $libro = $this->ejecutar($sql, $parametros)->fetch();
 
         /** @var Libro|null */
         return $libro === false ? null : $libro;
     }
 
+    /**
+     * Prepara la consulta y le pasa los parámetros con su tipo: los enteros como enteros, que el
+     * LIMIT no acepta como texto.
+     *
+     * @param array<int|string, mixed> $parametros por posición (lista) o por nombre
+     */
+    private function ejecutar(string $sql, array $parametros): PDOStatement
+    {
+        $consulta = $this->pdo()->prepare($sql);
+        foreach ($parametros as $clave => $valor) {
+            $consulta->bindValue(
+                is_int($clave) ? $clave + 1 : $clave,
+                $valor,
+                is_int($valor) ? PDO::PARAM_INT : PDO::PARAM_STR,
+            );
+        }
+        $consulta->execute();
+
+        return $consulta;
+    }
+
     private function pdo(): PDO
     {
         return $this->db->pdo();
-    }
-
-    /**
-     * Todo lo que la búsqueda mira de un libro, junto y normalizado. El ISBN va dos veces, con y
-     * sin guiones, así se encuentra escrito de las dos formas.
-     *
-     * @param Libro $libro
-     */
-    private static function indice(array $libro): string
-    {
-        return self::normalizar(implode(' ', [
-            $libro['titulo'],
-            $libro['autor'],
-            $libro['genero'],
-            $libro['isbn'],
-            str_replace('-', '', $libro['isbn']),
-        ]));
-    }
-
-    /**
-     * Sin tildes y en minúsculas, para que «ficcion» encuentre «Ficción» y «baez», «Baez». Con
-     * strtr y no con mb_* ni iconv: el TP3 no depende de extensiones que el hosting del punto 7
-     * puede no tener instaladas.
-     */
-    private static function normalizar(string $texto): string
-    {
-        $sinTildes = strtr(trim($texto), [
-            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
-            'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u', 'Ñ' => 'n',
-        ]);
-
-        return strtolower($sinTildes);
     }
 }
