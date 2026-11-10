@@ -13,9 +13,7 @@ CREATE DATABASE IF NOT EXISTS pawprints
     -- común, como la búsqueda del TP3, que normalizaba el texto en PHP.
     COLLATE utf8mb4_0900_ai_ci;
 
--- El usuario con el que se conecta el sitio. Sólo puede leer y escribir filas: no crea, cambia ni
--- borra tablas. Si alguien lograra inyectar SQL, no podría tirar la base ni darse más permisos
--- (TP5, consigna 4). Las tablas se crean con root, con este mismo script.
+-- El usuario con el que se conecta el sitio. Sus permisos van al final, después de las tablas.
 --
 -- La clave es la de desarrollo de config.example.ini. En el servidor publicado se cambia después
 -- de correr el script, con ALTER USER, y la nueva va sólo en su config.ini.
@@ -24,8 +22,6 @@ CREATE DATABASE IF NOT EXISTS pawprints
 -- máquina local, MySQL la identifica con uno u otro.
 CREATE USER IF NOT EXISTS 'pawprints'@'localhost' IDENTIFIED BY 'pawprints';
 CREATE USER IF NOT EXISTS 'pawprints'@'127.0.0.1' IDENTIFIED BY 'pawprints';
-GRANT SELECT, INSERT, UPDATE, DELETE ON pawprints.* TO 'pawprints'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON pawprints.* TO 'pawprints'@'127.0.0.1';
 
 USE pawprints;
 
@@ -92,3 +88,24 @@ CREATE TABLE IF NOT EXISTS personal (
     PRIMARY KEY (id),
     UNIQUE KEY personal_usuario (usuario)
 ) ENGINE = InnoDB;
+
+-- Los permisos del usuario del sitio: en cada tabla, sólo lo que el sitio hace con ella. No crea,
+-- cambia ni borra tablas, y no borra filas, porque el sitio nunca borra nada. Si alguien lograra
+-- inyectar SQL (TP5, consigna 5), no podría tirar la base, vaciar el catálogo ni darse más
+-- permisos. Las tablas se crean con root, con este mismo script.
+--
+-- Primero se le saca lo que tuviera, así volver a correr el script deja estos permisos y ningún
+-- otro, aunque una versión anterior le hubiera dado más (hasta el TP5 tenía DELETE en toda la
+-- base). Van por tabla porque un GRANT sobre una tabla pide que la tabla ya exista.
+REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.* FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.libros FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.reservas FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.personal FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+
+-- El catálogo se lee y el personal carga libros nuevos.
+GRANT SELECT, INSERT ON pawprints.libros TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+-- Las reservas se guardan, se listan y se marcan con el aviso enviado.
+GRANT SELECT, INSERT, UPDATE ON pawprints.reservas TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+-- El ingreso lee el personal y actualiza el hash viejo; bin/crear-personal.php da de alta
+-- usuarios y les cambia la contraseña.
+GRANT SELECT, INSERT, UPDATE ON pawprints.personal TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';

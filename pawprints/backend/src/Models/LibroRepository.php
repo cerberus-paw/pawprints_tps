@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PawPrints\Models;
 
+use LogicException;
 use PawPrints\Core\Database;
 use PDO;
 use PDOException;
@@ -185,7 +186,7 @@ final class LibroRepository implements CatalogoDeLibros
 
     /**
      * El WHERE de la búsqueda y sus parámetros, que usan tanto la lista como el total. Lo que
-     * escribió el usuario va siempre como parámetro y nunca pegado en el SQL (TP5, consigna 4).
+     * escribió el usuario va siempre como parámetro y nunca pegado en el SQL (TP5, consigna 5).
      *
      * @param array<string, string|null> $filtros
      *
@@ -316,6 +317,12 @@ final class LibroRepository implements CatalogoDeLibros
      */
     private function cuantosPor(string $campo): array
     {
+        // El nombre va pegado en el SQL: que sea uno de estos dos lo controla el código y no sólo
+        // el comentario, por si mañana alguien la llama con un dato del pedido.
+        if (!in_array($campo, ['genero', 'formato'], true)) {
+            throw new LogicException("cuantosPor() no cuenta por «{$campo}».");
+        }
+
         $filas = $this->pdo()
             ->query("SELECT {$campo}, COUNT(*) FROM libros GROUP BY {$campo} ORDER BY {$campo}")
             ->fetchAll(PDO::FETCH_KEY_PAIR);

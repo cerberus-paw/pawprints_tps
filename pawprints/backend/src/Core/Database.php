@@ -52,7 +52,7 @@ final class Database
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 // Preparadas de verdad en el servidor: la consulta y los datos viajan por separado,
-                // que es lo que protege de la inyección SQL (TP5, consigna 4), y los enteros y
+                // que es lo que protege de la inyección SQL (TP5, consigna 5), y los enteros y
                 // decimales vuelven con su tipo y no como texto.
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
