@@ -1,0 +1,207 @@
+{#
+  El catálogo (TP3, punto 4; Agustina): listado con búsqueda, filtros, orden, paginado y CSV.
+
+  Mantiene la estructura de catalogo.html del TP2 porque catalogo.css se cuelga de ella con
+  selectores estructurales (`main > section:nth-of-type(1)`, `article > p:nth-of-type(2)`…):
+  mover un elemento de lugar le cambia los estilos.
+
+  Variables (CatalogoController::index):
+    libros     — los de esta página
+    total      — resultados de la búsqueda, en todas las páginas
+    pagina, paginas, porPagina — la página que se ve (desde 1), cuántas hay y cuántos libros entran
+    cantidades — las que se pueden elegir en el desplegable de libros por página
+    filtros    — los de la query, sin los vacíos y en el orden de CatalogoController::FILTROS
+    generos, formatos — valor => cuántos libros
+    ordenes    — valor => etiqueta del desplegable
+#}
+{% extends 'base.html.twig' %}
+
+{#
+  Un campo oculto por filtro activo, para que cada formulario cambie sólo lo suyo: el buscador
+  conserva los filtros, y los filtros, la búsqueda.
+#}
+{% macro ocultos(filtros, excepto) %}
+  {%- for nombre, valor in filtros|filter((v, nombre) => nombre not in excepto) %}
+          <input type="hidden" name="{{ nombre }}" value="{{ valor }}">
+  {%- endfor %}
+{% endmacro %}
+
+{#
+  Un enlace a esta misma vista con los filtros puestos. url_encode arma la query con
+  http_build_query: cada valor sale codificado, y Twig escapa el resto para el href.
+#}
+{% macro url(ruta, filtros) -%}
+  {{ ruta }}{% if filtros is not empty %}?{{ filtros|url_encode }}{% endif %}
+{%- endmacro %}
+
+{% block contenido %}
+{% set buscado = filtros.q ?? '' %}
+{% set generoActivo = filtros.genero ?? '' %}
+{% set formatoActivo = filtros.formato ?? '' %}
+{% set ordenActivo = filtros.orden ?? '' %}
+{# El tramo del listado que se ve en esta página, contado desde 1. #}
+{% set primero = (pagina - 1) * porPagina + 1 %}
+{% set ultimo = primero + libros|length - 1 %}
+
+  {# data-catalogo-json: de dónde trae el JS el catálogo entero para filtrar en el navegador. #}
+  <main data-catalogo-json="/catalogo/json">
+
+    <section aria-labelledby="titulo-catalogo">
+      <h1 id="titulo-catalogo">Explora nuestro catálogo</h1>
+      <p>Navega entre nuestra colección de libros físicos y digitales.</p>
+
+      <search>
+        <form action="/catalogo" method="get" id="catalogo-busqueda">
+          <label for="buscar-catalogo">Buscar por título, autor, género o ISBN:</label>
+          <input type="search" id="buscar-catalogo" name="q" value="{{ buscado }}"
+                 maxlength="100" placeholder="Buscar por título, autor, género o ISBN...">
+          <button type="submit">Buscar</button>
+          {{- _self.ocultos(filtros, ['q']) }}
+        </form>
+      </search>
+    </section>
+
+    <hr>
+
+    <section aria-labelledby="titulo-seccion-catalogo">
+      <h2 id="titulo-seccion-catalogo">Catálogo de Libros</h2>
+
+      {# Una sola opción por filtro: Core\Request descarta las queries con arrays, así que son
+         radios y no casillas. Las cantidades se cuentan sobre el catálogo completo. #}
+      <aside aria-labelledby="titulo-filtros">
+        <h3 id="titulo-filtros">Filtros</h3>
+
+        <form action="/catalogo" method="get" id="catalogo-filtros">
+
+          <fieldset>
+            <legend>Categorías</legend>
+            <ul>
+              <li>
+                <input type="radio" id="cat-todas" name="genero" value=""{% if generoActivo == '' %} checked{% endif %}>
+                <label for="cat-todas">Todas <small>({{ generos|reduce((suma, n) => suma + n, 0) }})</small></label>
+              </li>
+              {% for genero, cuantos in generos %}
+              <li>
+                <input type="radio" id="cat-{{ genero|slug }}" name="genero" value="{{ genero }}"{% if generoActivo is same as(genero) %} checked{% endif %}>
+                <label for="cat-{{ genero|slug }}">{{ genero }} <small>({{ cuantos }})</small></label>
+              </li>
+              {% endfor %}
+            </ul>
+          </fieldset>
+
+          <fieldset>
+            <legend>Formato</legend>
+            <ul>
+              <li>
+                <input type="radio" id="form-todos" name="formato" value=""{% if formatoActivo == '' %} checked{% endif %}>
+                <label for="form-todos">Todos</label>
+              </li>
+              {% for formato, cuantos in formatos %}
+              <li>
+                <input type="radio" id="form-{{ formato|slug }}" name="formato" value="{{ formato }}"{% if formatoActivo is same as(formato) %} checked{% endif %}>
+                <label for="form-{{ formato|slug }}">{{ formato }} <small>({{ cuantos }})</small></label>
+              </li>
+              {% endfor %}
+            </ul>
+          </fieldset>
+
+          {# El rango de precio son dos montos libres, en pesos e inclusivos. Un campo vacío es
+             «sin límite»; si el mínimo supera al máximo, el servidor no aplica el filtro. #}
+          <fieldset>
+            <legend>Rango de Precio</legend>
+            <div class="rango-precio">
+              <p>
+                <label for="precio-desde">Desde ($)</label>
+                <input type="number" id="precio-desde" name="precio_desde" value="{{ filtros.precio_desde ?? '' }}"
+                       min="0" step="1" inputmode="numeric" placeholder="Sin mínimo">
+              </p>
+              <p>
+                <label for="precio-hasta">Hasta ($)</label>
+                <input type="number" id="precio-hasta" name="precio_hasta" value="{{ filtros.precio_hasta ?? '' }}"
+                       min="0" step="1" inputmode="numeric" placeholder="Sin máximo">
+              </p>
+            </div>
+          </fieldset>
+
+          <button type="submit">Aplicar Filtros</button>
+          {{- _self.ocultos(filtros, ['genero', 'formato', 'precio_desde', 'precio_hasta']) }}
+        </form>
+      </aside>
+
+      {# El listado de esta página, el paginado y el mismo listado en CSV. #}
+      <section aria-labelledby="titulo-lista-libros">
+        {# La tarjeta vacía que clona el JS del catálogo cuando redibuja el listado. #}
+        <template id="plantilla-libro">
+{{ include('partials/tarjeta-libro.html.twig', {libro: null}, with_context = false) }}
+        </template>
+
+        <h3 id="titulo-lista-libros" tabindex="-1">Resultados</h3>
+
+        {# «Mostrando X–Y de Z»: qué tramo del listado se ve y cuántos libros hay en total. El JS
+           del catálogo arma este mismo texto cuando redibuja el listado, y aria-live hace que el
+           lector de pantalla lo anuncie. #}
+        <p id="catalogo-resumen" aria-live="polite">
+          {% if total == 0 %}
+          Mostrando <strong>0 libros</strong>
+          {% else %}
+          Mostrando <strong>{{ primero }}–{{ ultimo }}</strong> de
+          <strong>{{ total }} {{ total == 1 ? 'libro' : 'libros' }}</strong>
+          {% endif %}
+        </p>
+
+        {# El orden y la cantidad por página van en la misma barra y con un solo botón: las dos
+           cambian cómo se ve este mismo listado. Sin el campo oculto de «pagina», cambiar
+           cualquiera de las dos vuelve a la primera página, que es lo que se espera: con otra
+           cantidad por página, la página 3 de antes ya no es la misma. #}
+        <form action="/catalogo" method="get" id="catalogo-vista">
+          <label for="ordenar-libros">Ordenar por:</label>
+          <select id="ordenar-libros" name="orden">
+            {% for valor, etiqueta in ordenes %}
+            <option value="{{ valor }}"{% if ordenActivo is same as(valor) %} selected{% endif %}>{{ etiqueta }}</option>
+            {% endfor %}
+          </select>
+
+          <label for="libros-por-pagina">Libros por página:</label>
+          <select id="libros-por-pagina" name="por_pagina">
+            {% for cantidad in cantidades %}
+            <option value="{{ cantidad }}"{% if porPagina == cantidad %} selected{% endif %}>{{ cantidad }}</option>
+            {% endfor %}
+          </select>
+
+          {# «Actualizar» y no «Aplicar»: el botón de los filtros, al costado, ya dice «Aplicar
+             Filtros», y dos botones parecidos en la misma pantalla se confunden. #}
+          <button type="submit">Actualizar</button>
+          {{- _self.ocultos(filtros, ['orden', 'por_pagina']) }}
+        </form>
+
+        {% if libros is empty %}
+        <p data-sin-resultados>
+          No encontramos libros con esa búsqueda.
+          <a href="/catalogo">Ver todo el catálogo</a>.
+        </p>
+        {% else %}
+        <ul>
+          {% for libro in libros %}
+{{ include('partials/tarjeta-libro.html.twig', {libro: libro}, with_context = false) }}
+          {% endfor %}
+        </ul>
+
+        {{ include('partials/paginado.html.twig', {
+          etiqueta: 'Paginado del catálogo',
+          ruta: '/catalogo',
+          query: filtros,
+          pagina: pagina,
+          paginas: paginas,
+        }, with_context = false) }}
+        {% endif %}
+
+        <p>
+          {# La otra representación del mismo listado: se descarga con la búsqueda y los filtros
+             puestos, pero sin paginar. #}
+          <a href="{{ _self.url('/catalogo/csv', filtros) }}" id="catalogo-csv" download>Descargar estos resultados en CSV</a>
+        </p>
+      </section>
+    </section>
+
+  </main>
+{% endblock %}

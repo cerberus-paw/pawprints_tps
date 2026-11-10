@@ -1,0 +1,95 @@
+{#
+  La ficha de un libro (TP3, punto 4; Agustina), con el botón que lleva a la reserva.
+
+  Mantiene la estructura de detalle-libro.html del TP2: detalle-libro.css se cuelga de los
+  aria-labelledby de cada sección y del orden de los párrafos.
+
+  Variables (CatalogoController::libro):
+    libro        — como lo devuelve LibroRepository::porId()
+    autor        — su reseña de data/autores.json, o null si todavía no tiene
+    recomendados — otros libros del catálogo, primero los del mismo género
+#}
+{% extends 'base.html.twig' %}
+
+{% block contenido %}
+  <main>
+
+    {# El botón de reservar lleva a /reserva con el libro ya elegido (punto 5). #}
+    <article aria-labelledby="titulo-libro-principal">
+      <header>
+        <p><small>GÉNERO: {{ libro.genero }} &bull; ISBN: {{ libro.isbn }}</small></p>
+        <h1 id="titulo-libro-principal">{{ libro.titulo }}</h1>
+        <p>Por <strong>{{ libro.autor }}</strong></p>
+      </header>
+
+      <figure>
+        <img src="/img/{{ libro.imagen }}"
+             alt="Portada del libro {{ libro.titulo }} de {{ libro.autor }}">
+        <figcaption>Portada oficial - {{ libro.titulo }}</figcaption>
+      </figure>
+
+      <section aria-labelledby="titulo-descripcion">
+        <h2 id="titulo-descripcion">Descripción del libro</h2>
+        <p>{{ libro.descripcion }}</p>
+      </section>
+
+      <section aria-labelledby="titulo-comprar-reservar">
+        <h2 id="titulo-comprar-reservar" hidden>Opciones de compra y reserva</h2>
+        <p>
+          <strong>Precio:</strong> <data value="{{ libro.precio }}">{{ libro.precio|pesos }}</data>
+          <mark>{{ libro.stock > 0 ? 'EN STOCK' : 'SIN STOCK' }}</mark>
+        </p>
+
+        <p>
+          <a href="#carrito">Agregar al carrito</a>
+          {% if libro.stock > 0 %}
+          {# El formulario de reserva lo recibe en el desplegable ya elegido. #}
+          <a href="/reserva?libro={{ libro.id }}">Reservar en tienda</a>
+          {% endif %}
+        </p>
+      </section>
+    </article>
+
+    {% if autor %}
+    <hr>
+
+    {# La reseña vive en data/autores.json, porque un autor escribe varios libros y su reseña es
+       una sola. #}
+    <section aria-labelledby="titulo-sobre-autor">
+      <h2 id="titulo-sobre-autor">Sobre el Autor</h2>
+
+      <article>
+        {% if autor.imagen is not null %}
+        <figure>
+          {# No se usa un retrato: los autores son personajes inventados y poner la cara de una
+             persona real le atribuiría una identidad que no es la suya. #}
+          <img src="/img/{{ autor.imagen }}" alt="{{ autor.imagen_alt }}">
+          <figcaption>{{ autor.imagen_alt }}</figcaption>
+        </figure>
+        {% endif %}
+        <div>
+          <header>
+            <h3>{{ autor.nombre }}</h3>
+          </header>
+          <p>{{ autor.bio }}</p>
+        </div>
+      </article>
+    </section>
+    {% endif %}
+
+    {% if recomendados is not empty %}
+    <hr>
+
+    <section aria-labelledby="titulo-recomendaciones">
+      <h2 id="titulo-recomendaciones">Recomendaciones</h2>
+
+      <ul>
+        {% for otro in recomendados %}
+{{ include('partials/tarjeta-libro.html.twig', {libro: otro, nivel: 3, resumen: false}, with_context = false) }}
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+  </main>
+{% endblock %}

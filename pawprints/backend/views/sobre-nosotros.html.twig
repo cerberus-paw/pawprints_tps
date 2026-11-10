@@ -1,16 +1,15 @@
-<?php
-/**
- * Vista Acerca de Nosotros — PAWPrints
- * Tarea 3: «Acerca de nosotros» (Salvador)
- */
-require __DIR__ . '/layouts/header.php';
-?>
+{#
+  «Sobre nosotros» (TP3, punto 3; Salvador): la historia, los servicios y dónde está la
+  tienda. Es contenido fijo.
+#}
+{% extends 'base.html.twig' %}
 
+{% block contenido %}
   <main>
 
-    <!-- ============================================================
+    {# ============================================================
          HERO — Foto de la entrada de la tienda con tagline superpuesto.
-         ============================================================ -->
+         ============================================================ #}
     <figure>
       <img src="/img/entrada-tienda.jpg" alt="Entrada de la librería PAWPrints en Mercedes, Buenos Aires">
       <figcaption>
@@ -19,9 +18,9 @@ require __DIR__ . '/layouts/header.php';
       </figcaption>
     </figure>
 
-    <!-- ============================================================
+    {# ============================================================
          HISTORIA — Texto fundacional + pilares de la librería.
-         ============================================================ -->
+         ============================================================ #}
     <article>
 
       <section>
@@ -43,9 +42,9 @@ require __DIR__ . '/layouts/header.php';
 
     </article>
 
-    <!-- ============================================================
+    {# ============================================================
          SERVICIOS COMUNITARIOS — Tarjetas de servicios.
-         ============================================================ -->
+         ============================================================ #}
     <section>
       <h2>Servicios Comunitarios</h2>
 
@@ -71,9 +70,9 @@ require __DIR__ . '/layouts/header.php';
       </ul>
     </section>
 
-    <!-- ============================================================
+    {# ============================================================
          UBICACIÓN — Datos de contacto y mapa interactivo.
-         ============================================================ -->
+         ============================================================ #}
     <section>
       <p><strong>Visitanos</strong></p>
       <h2>¿Dónde estamos?</h2>
@@ -102,6 +101,4 @@ require __DIR__ . '/layouts/header.php';
     </section>
 
   </main>
-
-<?php
-require __DIR__ . '/layouts/footer.php';
+{% endblock %}
