@@ -131,6 +131,6 @@ class LibroNuevoController extends Controller
 
     private function libros(): LibroRepository
     {
-        return $this->libros ??= new LibroRepository();
+        return $this->libros ??= new LibroRepository($this->db);
     }
 }
