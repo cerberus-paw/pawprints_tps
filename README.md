@@ -996,6 +996,34 @@ forma de escribir lo mismo, y rompe búsquedas legítimas, como un libro con «O
 - **Los errores no se muestran**: si una consulta falla, la persona ve la página de error genérica
   y el detalle queda en el log ([consigna 6 del TP3](#6-errores)).
 
+#### Pruebas
+
+Cada carga se probó contra el sitio con la base MySQL 8.4 local. En ninguna cambió el resultado de
+la consulta, salió un error de la base ni se demoró la respuesta, y al final las tres tablas
+seguían ahí.
+
+| Dónde | Entrada | Qué pasó |
+| --- | --- | --- |
+| Buscador del catálogo | `' OR '1'='1` | 0 libros: se buscó ese texto |
+| Buscador del catálogo | `%' UNION SELECT usuario, clave_hash FROM personal -- ` | 0 libros, y ningún usuario ni hash en la página |
+| Buscador del catálogo | `'; DROP TABLE libros; -- ` | 0 libros; la tabla sigue |
+| Buscador del catálogo | `baez' AND SLEEP(5) -- ` | 0 libros, respuesta en 27 ms: el `SLEEP` no se ejecutó |
+| CSV y JSON del catálogo | `?q=' OR '1'='1` | 0 filas y una lista vacía |
+| Orden | `?orden=titulo;DROP` y `?orden=titulo-asc, (SELECT SLEEP(5))` | El orden por defecto, como un orden desconocido |
+| Libros por página | `?por_pagina=1;DROP TABLE libros` | La cantidad por defecto (24) |
+| Página | `?pagina=1 OR 1` | 404: no es un número de página |
+| Filtro de género | `?genero=' OR '1'='1` | 0 libros: no hay un género con ese nombre |
+| Filtro de precio | `?precio_desde=0 OR 1=1` | Sin límite de precio, como un monto inválido |
+| Ficha del libro | `/libros/1 OR 1=1` y `/libros/1'` | 404 |
+| Reserva | `?libro=1 OR 1=1` | El formulario sin ningún libro elegido |
+| Reserva | `libro_id=1 OR 1=1` | 422: «Ese libro no está en el catálogo» |
+| Reserva | Nombre `Robert'); DROP TABLE reservas; --` y comentarios `'); DELETE FROM reservas; --` | Se guardó la reserva con esos textos tal cual; las demás siguen |
+| Ingreso del personal | Usuario `admin' -- ` o `prueba' -- ` con cualquier contraseña | 422: «Usuario o contraseña incorrectos» |
+| Ingreso del personal | Usuario y contraseña `' OR '1'='1` | 422 |
+| Ingreso del personal | Usuario `x' UNION SELECT 1, 'admin', 'Admin', '<hash de una clave conocida>' -- ` y esa clave | 422: no entra |
+| Carga de libros | Título `Robert'); DROP TABLE libros; --`, autor `O'Connor` y resumen `' OR 1=1 --` | Se guardó el libro con esos textos tal cual |
+| Usuario `pawprints` en la consola de MySQL | `DROP TABLE libros`, `DELETE FROM reservas`, `UPDATE libros …`, `CREATE TABLE …`, `GRANT …` | «command denied» en todos |
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
