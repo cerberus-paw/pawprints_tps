@@ -49,7 +49,7 @@
                     <a href="tel:{{ p.telefono|replace({' ': '', '-': '', '(': '', ')': ''}) }}">{{ p.telefono }}</a>
                   </td>
                   {# Lo escribió el cliente: sale escapado, como todo lo que imprime Twig. Es el
-                     ejemplo de XSS almacenado de la consigna 5: un <script> en un comentario se
+                     ejemplo de XSS almacenado de la consigna 6: un <script> en un comentario se
                      ve como texto y no se ejecuta en la pantalla del personal. #}
                   <td>{{ p.comentarios|nl2br }}</td>
                   <td{% if not p.aviso_enviado %} class="aviso-pendiente"{% endif %}>{{ p.aviso_enviado ? 'Enviado' : 'Sin enviar' }}</td>

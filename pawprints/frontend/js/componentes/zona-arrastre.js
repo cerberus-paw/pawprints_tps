@@ -69,29 +69,11 @@ export class ZonaArrastre {
     this.zona.setAttribute('role', 'button');
     this.zona.setAttribute('aria-label', this.texto);
 
-    this.zona.innerHTML = `
-      <div class="zona-arrastre-contenido">
-        <div class="zona-arrastre-icono" aria-hidden="true">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </div>
-        <p class="zona-arrastre-instruccion">${this.texto}</p>
-        <p class="zona-arrastre-aviso" role="status" aria-live="assertive" hidden></p>
-      </div>
-      <div class="zona-arrastre-preview" hidden>
-        <img class="zona-arrastre-img" alt="" src="">
-        <div class="zona-arrastre-detalles">
-          <p class="zona-arrastre-nombre"></p>
-          <p class="zona-arrastre-tamano"></p>
-          <button type="button" class="zona-arrastre-quitar" aria-label="Quitar imagen de tapa y elegir otra">
-            Quitar tapa
-          </button>
-        </div>
-      </div>
-    `;
+    // Se arma con nodos y no con innerHTML: el texto de la instrucción sale de data-texto, y
+    // con textContent un < o un & se ven como tales en lugar de interpretarse como HTML. Así
+    // ningún dato que llegue al componente puede agregar elementos o scripts a la página.
+    this.zona.append(this.armarContenido(), this.armarPreview());
+
 
     this.elContenido = this.zona.querySelector('.zona-arrastre-contenido');
     this.elPreview = this.zona.querySelector('.zona-arrastre-preview');
@@ -117,6 +99,45 @@ export class ZonaArrastre {
       this.zona.setAttribute('aria-invalid', 'true');
       this.describir(errorExistente.id, true);
     }
+  }
+
+  /** El ícono, la instrucción y el aviso, que se ven mientras no hay una tapa elegida. */
+  armarContenido() {
+    const contenido = elemento('div', 'zona-arrastre-contenido');
+
+    const icono = elemento('div', 'zona-arrastre-icono');
+    icono.setAttribute('aria-hidden', 'true');
+    icono.append(iconoImagen());
+
+    const instruccion = elemento('p', 'zona-arrastre-instruccion');
+    instruccion.textContent = this.texto;
+
+    const aviso = elemento('p', 'zona-arrastre-aviso');
+    aviso.setAttribute('role', 'status');
+    aviso.setAttribute('aria-live', 'assertive');
+    aviso.hidden = true;
+
+    contenido.append(icono, instruccion, aviso);
+    return contenido;
+  }
+
+  /** La vista previa de la tapa elegida, con su nombre, su tamaño y el botón para quitarla. */
+  armarPreview() {
+    const preview = elemento('div', 'zona-arrastre-preview');
+    preview.hidden = true;
+
+    const img = elemento('img', 'zona-arrastre-img');
+    img.alt = '';
+
+    const detalles = elemento('div', 'zona-arrastre-detalles');
+    const quitar = elemento('button', 'zona-arrastre-quitar');
+    quitar.type = 'button';
+    quitar.setAttribute('aria-label', 'Quitar imagen de tapa y elegir otra');
+    quitar.textContent = 'Quitar tapa';
+    detalles.append(elemento('p', 'zona-arrastre-nombre'), elemento('p', 'zona-arrastre-tamano'), quitar);
+
+    preview.append(img, detalles);
+    return preview;
   }
 
   // ---- Eventos y Comportamiento ------------------------------------------------------------
@@ -380,4 +401,34 @@ export class ZonaArrastre {
     this.elAviso.textContent = '';
     this.elAviso.hidden = true;
   }
+}
+
+/** Un elemento con su clase. */
+function elemento(etiqueta, clase) {
+  const nodo = document.createElement(etiqueta);
+  nodo.className = clase;
+  return nodo;
+}
+
+/** El ícono de una imagen. Un SVG se arma con createElementNS, en su propio espacio de nombres. */
+function iconoImagen() {
+  const SVG = 'http://www.w3.org/2000/svg';
+  const crear = (etiqueta, atributos) => {
+    const nodo = document.createElementNS(SVG, etiqueta);
+    for (const [nombre, valor] of Object.entries(atributos)) {
+      nodo.setAttribute(nombre, valor);
+    }
+    return nodo;
+  };
+
+  const svg = crear('svg', {
+    width: '40', height: '40', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+    'stroke-width': '2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+  });
+  svg.append(
+    crear('rect', { x: '3', y: '3', width: '18', height: '18', rx: '2', ry: '2' }),
+    crear('circle', { cx: '8.5', cy: '8.5', r: '1.5' }),
+    crear('polyline', { points: '21 15 16 10 5 21' }),
+  );
+  return svg;
 }
