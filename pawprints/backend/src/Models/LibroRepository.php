@@ -10,7 +10,7 @@ use PDOException;
 use PDOStatement;
 
 /**
- * El catálogo, guardado en la tabla libros de la base (TP5; hasta el TP4, en data/libros.json).
+ * El catálogo, guardado en la tabla libros de la base (TP5; hasta el TP4, en un archivo JSON).
  * Resuelve la búsqueda, los filtros, el orden y el paginado, y es la implementación de
  * CatalogoDeLibros que usa la reserva del punto 5. Los métodos públicos y lo que devuelven son los
  * mismos que con el JSON: el cambio de persistencia no toca ningún controlador ni vista.
