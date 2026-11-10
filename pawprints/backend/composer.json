@@ -5,6 +5,7 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.3",
+        "ext-pdo_mysql": "*",
         "twig/twig": "^3.0"
     },
     "autoload": {

@@ -6,7 +6,8 @@ namespace PawPrints\Core;
 
 /**
  * Base de los controladores. Cada acción recibe la Request y devuelve una Response; la vista, la
- * configuración, el logger y el mailer se los da App, así ningún controlador los crea por su cuenta.
+ * configuración, el logger, el mailer y la base se los da App, así ningún controlador los crea por
+ * su cuenta.
  */
 abstract class Controller
 {
@@ -15,6 +16,7 @@ abstract class Controller
         protected readonly Config $config,
         protected readonly Logger $logger,
         protected readonly Mailer $mailer,
+        protected readonly Database $db,
     ) {
     }
 
