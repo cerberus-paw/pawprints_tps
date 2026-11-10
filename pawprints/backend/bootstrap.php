@@ -3,18 +3,13 @@
 declare(strict_types=1);
 
 /*
- * Autoload PSR-4: PawPrints\Core\Router está en src/Core/Router.php. Es a mano porque el TP3 no
- * tiene dependencias de terceros; cuando el TP5 sume Twig con Composer, su autoload declara la
- * misma correspondencia y ninguna clase cambia.
+ * El autoload de Composer, que además de Twig carga las clases propias con la misma
+ * correspondencia PSR-4 que tenía el autoload a mano del TP3: PawPrints\Core\Router está en
+ * src/Core/Router.php. Sin vendor/ el sitio no puede arrancar, y el mensaje dice qué falta.
  */
-spl_autoload_register(static function (string $clase): void {
-    $prefijo = 'PawPrints\\';
-    if (!str_starts_with($clase, $prefijo)) {
-        return;
-    }
+$autoload = __DIR__ . '/vendor/autoload.php';
+if (!is_file($autoload)) {
+    throw new RuntimeException('Falta vendor/: correr «composer install» en pawprints/backend.');
+}
 
-    $archivo = __DIR__ . '/src/' . str_replace('\\', '/', substr($clase, strlen($prefijo))) . '.php';
-    if (is_file($archivo)) {
-        require $archivo;
-    }
-});
+require $autoload;

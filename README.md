@@ -29,13 +29,15 @@ Las cinco maquetas del TP2: [inicio](pawprints/frontend/index.html) · [catálog
 
 ## Cómo levantar el sitio
 
-Requisitos: **PHP 8.1 o superior** (con el servidor web incorporado y la extensión `openssl`, que
-trae cualquier instalación común) y **Git**. No hay base de datos, ni Composer, ni dependencias
-que instalar: los libros están en [`data/libros.json`](pawprints/backend/data/libros.json).
+Requisitos: **PHP 8.3 o superior** (con el servidor web incorporado y la extensión `openssl`, que
+trae cualquier instalación común), **[Composer](https://getcomposer.org/) 2** y **Git**. Composer
+instala Twig y el autoload de las clases; los libros están en
+[`data/libros.json`](pawprints/backend/data/libros.json).
 
 ```bash
 git clone https://github.com/cerberus-paw/pawprints_tps.git
 cd pawprints_tps
+composer install --working-dir=pawprints/backend
 cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
 php -S localhost:8080 -t pawprints/frontend
 ```
