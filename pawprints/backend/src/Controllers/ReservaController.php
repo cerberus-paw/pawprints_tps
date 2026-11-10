@@ -74,36 +74,36 @@ class ReservaController extends Controller
             ], 503);
         }
 
-        // Si el aviso al personal no sale, el cliente tiene que saberlo: vuelve a ver el
-        // formulario con lo que había escrito. La reserva igual quedó guardada, con el aviso sin
-        // enviar.
+        // Hasta el TP4, si el aviso al personal no salía la reserva se perdía, y por eso el cliente
+        // veía un 503 y volvía al formulario. Desde el TP5 ya quedó guardada y el personal la ve en
+        // su listado, marcada como «aviso sin enviar»: al cliente se le confirma igual y el error
+        // queda en el log con el número, para buscarla.
         try {
             $this->mailer->send($this->avisoAlPersonal($reserva, $numero));
+            $avisado = true;
         } catch (RuntimeException $error) {
-            $this->logger->error('No salió el aviso de la reserva {numero} del libro {libro}', [
+            $avisado = false;
+            $this->logger->error('No salió el aviso de la reserva {numero} del libro {libro}: queda como aviso sin enviar', [
                 'numero' => $numero,
                 'libro' => $reserva->libro['id'],
                 'exception' => $error,
             ]);
-
-            return $this->mostrar($campos, [
-                'envio' => 'No pudimos registrar tu reserva. Probá de nuevo en unos minutos o llamanos al +54 190168.',
-            ], 503);
         }
 
-        // El aviso salió, así que la reserva ya no se puede perder. Si falla la marca, el cliente
-        // no tiene por qué enterarse: en el listado figura como aviso sin enviar, que es lo
-        // prudente, y el log dice que sí salió.
-        try {
-            $this->reservas()->avisoEnviado($numero);
-        } catch (RuntimeException $error) {
-            $this->logger->warning('Salió el aviso de la reserva {numero}, pero no se pudo marcar en la base', [
-                'numero' => $numero,
-                'exception' => $error,
-            ]);
+        // Si falla la marca, el cliente no tiene por qué enterarse: en el listado figura como
+        // aviso sin enviar, que es lo prudente, y el log dice que sí salió.
+        if ($avisado) {
+            try {
+                $this->reservas()->avisoEnviado($numero);
+            } catch (RuntimeException $error) {
+                $this->logger->warning('Salió el aviso de la reserva {numero}, pero no se pudo marcar en la base', [
+                    'numero' => $numero,
+                    'exception' => $error,
+                ]);
+            }
         }
 
-        // El personal ya la tiene y va a contactar al cliente: si la confirmación no sale, alcanza
+        // La reserva está guardada y el personal la va a ver: si la confirmación no sale, alcanza
         // con dejarlo en el log.
         try {
             $this->mailer->send($this->confirmacionAlCliente($reserva, $numero));
@@ -116,8 +116,9 @@ class ReservaController extends Controller
         }
 
         // Sin los datos del cliente: el log no guarda datos personales.
-        $this->logger->info('Reserva {numero} guardada y enviada: libro {libro}, {cantidad} ejemplar(es)', [
+        $this->logger->info('Reserva {numero} guardada: libro {libro}, {cantidad} ejemplar(es), aviso {aviso}', [
             'numero' => $numero,
+            'aviso' => $avisado ? 'enviado' : 'sin enviar',
             'libro' => $reserva->libro['id'],
             'cantidad' => $reserva->cantidad,
         ]);
