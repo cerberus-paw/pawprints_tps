@@ -1,0 +1,39 @@
+{#
+  La tarjeta de un libro en un listado: la usan el catálogo y las recomendaciones de la ficha, así
+  el HTML de la tarjeta está en un solo lugar. Mantiene la estructura de catalogo.html del TP2,
+  porque catalogo.css y detalle-libro.css se cuelgan de ella (`article > p:nth-of-type(2)`…).
+
+  Se incluye sin el contexto de la página, para que no dependa de sus variables:
+
+    {{ include('partials/tarjeta-libro.html.twig', {libro: libro, nivel: 4}, with_context = false) }}
+
+  Variables:
+    libro   — como lo devuelve LibroRepository, o null para la tarjeta vacía del <template> que
+              completa el JS del catálogo (filtros-catalogo.js): éste llena cada [data-campo] con
+              textContent, y los enlaces, la imagen y el precio por su cuenta
+    nivel   — el del título: 4 en el catálogo, que va debajo del h3 «Resultados», y 3 en las
+              recomendaciones, que van debajo de un h2
+    resumen — si lleva el resumen del libro: el catálogo sí, las recomendaciones no
+
+  Los ?? '' son para la tarjeta vacía: con libro en null, libro.titulo no existe.
+#}
+{% set nivel = nivel ?? 4 %}
+{% set ficha = libro ? '/libros/' ~ libro.id : '' %}
+          <li>
+            <article>
+              <figure>
+                <img src="{{ libro ? '/img/' ~ libro.imagen : '' }}" alt="{{ libro ? 'Portada del libro ' ~ libro.titulo : '' }}">
+                <figcaption data-campo="formato">{{ libro.formato ?? '' }}</figcaption>
+              </figure>
+              <header>
+                <p><small>GÉNERO: <span data-campo="genero">{{ libro.genero ?? '' }}</span></small></p>
+                <h{{ nivel }}><a href="{{ ficha }}" data-campo="titulo">{{ libro.titulo ?? '' }}</a></h{{ nivel }}>
+                <p><strong>Autor:</strong> <span data-campo="autor">{{ libro.autor ?? '' }}</span></p>
+              </header>
+              {%- if resumen ?? true %}
+              <p><small><strong>Descripción:</strong> <span data-campo="resumen">{{ libro.resumen ?? '' }}</span></small></p>
+              {%- endif %}
+              <p><strong>Precio:</strong> <data value="{{ libro.precio ?? '' }}">{{ libro ? libro.precio|pesos : '' }}</data></p>
+              <p><a href="{{ ficha }}">Ver detalles &rarr;</a></p>
+            </article>
+          </li>

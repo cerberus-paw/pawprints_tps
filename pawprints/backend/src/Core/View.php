@@ -8,6 +8,7 @@ use LogicException;
 use Throwable;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
+use Twig\TwigFilter;
 
 /**
  * Genera el HTML a partir de las plantillas de views/ (patrón Template View): cada dato que le
@@ -53,6 +54,13 @@ final class View
             // obliga a acordarse de borrar backend/cache/.
             'auto_reload' => true,
         ]);
+
+        // «$16.500»: el precio como se lee en la Argentina, sin centavos. Es el mismo formato que
+        // pesos() en filtros-catalogo.js, así la tarjeta del servidor y la que arma el JS coinciden.
+        $this->twig->addFilter(new TwigFilter(
+            'pesos',
+            static fn (int|string $monto): string => '$' . number_format((int) $monto, 0, ',', '.'),
+        ));
     }
 
     /** Un dato para todas las plantillas que se generen de acá en adelante. */
