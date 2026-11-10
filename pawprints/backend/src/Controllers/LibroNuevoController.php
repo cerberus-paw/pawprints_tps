@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PawPrints\Controllers;
 
 use PawPrints\Core\Controller;
+use PawPrints\Core\HttpException;
 use PawPrints\Core\Request;
 use PawPrints\Core\Response;
 use PawPrints\Models\LibroNuevo;
@@ -14,6 +15,7 @@ use PawPrints\Models\LibroRepository;
 /**
  * La carga de libros nuevos (TP4, consigna 2): el formulario, con validaciones en línea en el
  * navegador (validador.js), y su envío, que el servidor vuelve a validar con las mismas reglas.
+ * Desde el TP5 el libro queda guardado en la base y aparece en el catálogo.
  */
 class LibroNuevoController extends Controller
 {
@@ -49,22 +51,46 @@ class LibroNuevoController extends Controller
             return $this->mostrar($campos, $error->errores, 422, $tapaEnviada);
         }
 
-        $this->logger->info('Libro nuevo validado: ISBN {isbn}', ['isbn' => $libro->isbn]);
+        try {
+            $id = $this->libros()->agregar($libro);
+        } catch (LibroNuevoInvalido $error) {
+            // Otra persona cargó el mismo ISBN entre la validación y el guardado: la tapa que se
+            // acaba de guardar no es de ningún libro.
+            $this->borrarTapa($libro->imagen);
+
+            return $this->mostrar($campos, $error->errores, 422, $tapaEnviada);
+        }
+
+        $this->logger->info('Libro nuevo agregado al catálogo: id {id}, ISBN {isbn}', ['id' => $id, 'isbn' => $libro->isbn]);
         if ($libro->imagen !== null) {
             $this->logger->info('Tapa guardada: {archivo}', ['archivo' => $libro->imagen]);
         }
 
-        // La respuesta es directa, sin redirigir a otra página como hace la reserva: el libro no
-        // se guarda (ver LibroNuevo), así que recargar y reenviar el formulario no duplica nada, y
-        // así la confirmación puede mostrar la ficha con lo que se cargó.
+        // 303 y a otra página, como la reserva: recargar la confirmación no vuelve a mandar el
+        // formulario ni carga el libro dos veces.
+        return Response::redirect("/libros/nuevo/confirmacion?libro={$id}", 303);
+    }
+
+    /**
+     * GET /libros/nuevo/confirmacion?libro={id} — lo que quedó guardado, leído de la base, con el
+     * enlace a la ficha del libro en el catálogo.
+     */
+    public function confirmacion(Request $request): Response
+    {
+        $id = filter_var((string) $request->query('libro', ''), FILTER_VALIDATE_INT);
+        $libro = $id === false ? null : $this->libros()->porId($id);
+        if ($libro === null) {
+            throw HttpException::notFound('No encontramos el libro que buscás.');
+        }
+
         return $this->render('libro-nuevo-confirmacion', [
             'title' => 'Libro cargado — PAWPrints',
-            'description' => 'Los datos del libro nuevo pasaron todas las validaciones.',
+            'description' => 'El libro nuevo ya está en el catálogo.',
             'activePage' => '',
             'pageClass' => 'page-libro-nuevo-confirmacion',
             'extraCss' => ['libro-nuevo.css'],
             'libro' => $libro,
-            'tapa' => $tapaEnviada ? $tapa : null,
+            'sinTapa' => $libro['imagen'] === LibroRepository::SIN_TAPA,
         ]);
     }
 
@@ -94,6 +120,17 @@ class LibroNuevoController extends Controller
         }
 
         return $nombreGenerado;
+    }
+
+    /** Borra una tapa guardada en frontend/img/tapas/, si la hay. */
+    private function borrarTapa(?string $archivo): void
+    {
+        // basename: el nombre lo genera guardarTapa(), pero borrar un archivo pide estar seguro
+        // de que no se sale de la carpeta.
+        $ruta = dirname(__DIR__, 3) . '/frontend/img/tapas/' . basename((string) $archivo);
+        if ($archivo !== null && is_file($ruta)) {
+            unlink($ruta);
+        }
     }
 
     /**

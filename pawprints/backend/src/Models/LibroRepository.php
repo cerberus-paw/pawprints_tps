@@ -6,6 +6,7 @@ namespace PawPrints\Models;
 
 use PawPrints\Core\Database;
 use PDO;
+use PDOException;
 use PDOStatement;
 
 /**
@@ -20,15 +21,26 @@ use PDOStatement;
  *
  * @phpstan-type Libro array{id: int, titulo: string, autor: string, genero: string, isbn: string,
  *               formato: string, precio: int, stock: int, resumen: string, descripcion: string,
- *               imagen: string|null}
+ *               imagen: string}
  */
 final class LibroRepository implements CatalogoDeLibros
 {
     /**
+     * La imagen de un libro que se cargó sin tapa, en frontend/img/ como las demás. Se pone al
+     * leerlo y no al guardarlo: en la base queda NULL, que dice que no tiene tapa, y las vistas,
+     * el CSV y el JSON siguen recibiendo siempre un archivo para mostrar.
+     */
+    public const SIN_TAPA = 'sin-tapa.svg';
+
+    /**
      * Las columnas que forman un libro, las mismas claves que tenía cada objeto del JSON. Se
      * nombran una por una y no con «*»: isbn_digitos y creado son de la base y no del libro.
      */
-    private const COLUMNAS = 'id, titulo, autor, genero, isbn, formato, precio, stock, resumen, descripcion, imagen';
+    private const COLUMNAS = 'id, titulo, autor, genero, isbn, formato, precio, stock, resumen, descripcion, '
+        . "COALESCE(imagen, '" . self::SIN_TAPA . "') AS imagen";
+
+    /** El código de MySQL para una clave única repetida. */
+    private const CLAVE_REPETIDA = 1062;
 
     /**
      * Cuántos libros por página se pueden pedir con `?por_pagina=…`. Es una lista cerrada y no un
@@ -80,6 +92,45 @@ final class LibroRepository implements CatalogoDeLibros
             'SELECT ' . self::COLUMNAS . ' FROM libros WHERE isbn_digitos = ?',
             [preg_replace('/\D/', '', $isbn)],
         );
+    }
+
+    /**
+     * Agrega al catálogo un libro cargado desde el formulario del personal y devuelve su id.
+     *
+     * LibroNuevo ya comprobó que el ISBN no está, pero entre esa consulta y este INSERT otra
+     * persona pudo cargar el mismo libro. El índice único de isbn_digitos lo frena igual, y el
+     * error vuelve como el mismo «ya hay un libro con ese ISBN» del formulario.
+     *
+     * @throws LibroNuevoInvalido si el ISBN ya está
+     */
+    public function agregar(LibroNuevo $libro): int
+    {
+        try {
+            $this->ejecutar(
+                'INSERT INTO libros (titulo, autor, genero, isbn, formato, precio, stock, resumen, descripcion, imagen)'
+                . ' VALUES (:titulo, :autor, :genero, :isbn, :formato, :precio, :stock, :resumen, :descripcion, :imagen)',
+                [
+                    'titulo' => $libro->titulo,
+                    'autor' => $libro->autor,
+                    'genero' => $libro->genero,
+                    'isbn' => $libro->isbn,
+                    'formato' => $libro->formato,
+                    'precio' => $libro->precio,
+                    'stock' => $libro->stock,
+                    'resumen' => $libro->resumen,
+                    'descripcion' => $libro->descripcion,
+                    // Relativa a frontend/img/, como las de los libros del catálogo inicial.
+                    'imagen' => $libro->imagen === null ? null : 'tapas/' . $libro->imagen,
+                ],
+            );
+        } catch (PDOException $error) {
+            if (($error->errorInfo[1] ?? null) === self::CLAVE_REPETIDA) {
+                throw new LibroNuevoInvalido(['isbn' => LibroNuevo::MENSAJES['isbn']['repetido']]);
+            }
+            throw $error;
+        }
+
+        return (int) $this->pdo()->lastInsertId();
     }
 
     /**
@@ -289,7 +340,7 @@ final class LibroRepository implements CatalogoDeLibros
 
     /**
      * Prepara la consulta y le pasa los parámetros con su tipo: los enteros como enteros, que el
-     * LIMIT no acepta como texto.
+     * LIMIT no acepta como texto, y null como NULL.
      *
      * @param array<int|string, mixed> $parametros por posición (lista) o por nombre
      */
@@ -300,7 +351,11 @@ final class LibroRepository implements CatalogoDeLibros
             $consulta->bindValue(
                 is_int($clave) ? $clave + 1 : $clave,
                 $valor,
-                is_int($valor) ? PDO::PARAM_INT : PDO::PARAM_STR,
+                match (true) {
+                    is_int($valor) => PDO::PARAM_INT,
+                    $valor === null => PDO::PARAM_NULL,
+                    default => PDO::PARAM_STR,
+                },
             );
         }
         $consulta->execute();

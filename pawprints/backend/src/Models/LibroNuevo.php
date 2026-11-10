@@ -8,9 +8,7 @@ namespace PawPrints\Models;
  * Un libro nuevo que pasó todas las validaciones del formulario de carga (TP4, consigna 2).
  *
  * La única forma de crearlo es desdeFormulario(), así que un LibroNuevo que existe es válido.
- * Todavía no se guarda: el catálogo es data/libros.json, que está versionado, y agregarle libros
- * desde el sitio haría que cada prueba modifique el repositorio. Se guarda cuando el TP5 traiga la
- * base de datos.
+ * Lo guarda LibroRepository::agregar() en la tabla libros (TP5).
  */
 final class LibroNuevo
 {

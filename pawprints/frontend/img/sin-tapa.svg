@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 400" width="900" height="1200" role="img" aria-label="Libro sin tapa">
+  <!-- La tapa de un libro cargado sin imagen. Misma proporción (3:4) que las tapas del catálogo,
+       con los colores de la identidad: violeta corporativo sobre lavanda. -->
+  <rect width="300" height="400" fill="#EDE0F7"/>
+  <rect x="18" y="18" width="264" height="364" fill="none" stroke="#5C068C" stroke-width="3"/>
+  <rect x="18" y="18" width="22" height="364" fill="#5C068C"/>
+  <text x="161" y="196" fill="#5C068C" font-family="Georgia, 'Times New Roman', serif" font-size="30" text-anchor="middle">PAWPrints</text>
+  <text x="161" y="234" fill="#3D0060" font-family="Helvetica, Arial, sans-serif" font-size="17" text-anchor="middle">Sin tapa</text>
+</svg>

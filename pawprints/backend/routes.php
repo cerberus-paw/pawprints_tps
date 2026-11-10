@@ -28,6 +28,7 @@ return static function (Router $router): void {
     // primera ruta que coincide, y {id} también atraparía «nuevo».
     $router->get('/libros/nuevo', [LibroNuevoController::class, 'formulario']);
     $router->post('/libros/nuevo', [LibroNuevoController::class, 'cargar']);
+    $router->get('/libros/nuevo/confirmacion', [LibroNuevoController::class, 'confirmacion']);
     $router->get('/libros/{id}', [CatalogoController::class, 'libro']);
 
     // El mismo /reserva muestra el formulario (GET) y lo recibe (POST).
