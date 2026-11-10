@@ -199,9 +199,16 @@ final class App
     private function dispatch(array $action, Request $request): Response
     {
         [$class, $method] = $action;
-        $response = (new $class($this->view, $this->config, $this->logger, $this->mailer, $this->db, $this->sesion))->$method($request);
+        $controller = new $class($this->view, $this->config, $this->logger, $this->mailer, $this->db, $this->sesion);
+        $response = $controller->$method($request);
         if (!$response instanceof Response) {
             throw new LogicException("{$class}::{$method} tiene que devolver una Response.");
+        }
+
+        // Lo que ve el personal (los datos de los clientes, el formulario de carga) no se guarda
+        // en ninguna caché, ni en la del navegador: después de salir, «atrás» no lo muestra.
+        if ($controller->soloPersonal()) {
+            $response = $response->withHeader('Cache-Control', 'no-store');
         }
 
         return $response;
@@ -217,6 +224,11 @@ final class App
     {
         $esHttp = $error instanceof HttpException;
         $status = $esHttp ? $error->status : 500;
+
+        // Una redirección no es una página de error: sólo el estado y el Location.
+        if ($esHttp && $status >= 300 && $status < 400) {
+            return new Response('', $status, $error->headers);
+        }
 
         // Un 4xx es parte del uso normal del sitio —un enlace viejo, una dirección escrita a
         // mano— y ya quedó en la línea que registra cada pedido. Un 5xx es un problema nuestro:

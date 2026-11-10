@@ -1,6 +1,7 @@
 {#
   Ingreso del personal (TP5, consigna 3). Variables:
     usuario — lo que escribió, para no hacérselo escribir de nuevo si se equivocó
+    volver  — la página del personal a la que vuelve después de ingresar
     error   — «Usuario o contraseña incorrectos.», o null
     csrf    — el token de la sesión, que vuelve con el formulario
 #}
@@ -20,6 +21,8 @@
 
       <form action="/personal/ingresar" method="post">
         <input type="hidden" name="csrf" value="{{ csrf }}">
+        {# Adónde vuelve después de ingresar; el servidor lo vuelve a revisar. #}
+        <input type="hidden" name="volver" value="{{ volver }}">
 
         <div>
           <label for="usuario">Usuario</label>
