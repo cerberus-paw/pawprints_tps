@@ -28,14 +28,18 @@ class PersonalController extends Controller
 
     private ?PersonalRepository $personal = null;
 
-    /** GET /personal/ingresar */
+    /**
+     * GET /personal/ingresar, o /personal/ingresar?volver=/libros/nuevo cuando lo mandó
+     * exigirPersonal() desde una página del personal.
+     */
     public function formulario(Request $request): Response
     {
+        $volver = self::volver($request->query('volver'));
         if ($this->sesion->personal() !== null) {
-            return Response::redirect(self::INICIO, 303);
+            return Response::redirect($volver, 303);
         }
 
-        return $this->mostrar('');
+        return $this->mostrar('', $volver);
     }
 
     /** POST /personal/ingresar */
@@ -43,6 +47,7 @@ class PersonalController extends Controller
     {
         $this->exigirCsrf($request);
 
+        $volver = self::volver($request->input('volver'));
         $usuario = strtolower(trim((string) $request->input('usuario', '')));
         $clave = (string) $request->input('clave', '');
 
@@ -55,7 +60,7 @@ class PersonalController extends Controller
             $this->logger->notice('Ingreso fallido del personal: usuario «{usuario}»', ['usuario' => $usuario]);
 
             // Un solo mensaje para los dos casos: no dice si el usuario existe.
-            return $this->mostrar($usuario, 'Usuario o contraseña incorrectos.', 422);
+            return $this->mostrar($usuario, $volver, 'Usuario o contraseña incorrectos.', 422);
         }
 
         // Si PHP cambió el algoritmo recomendado desde que se creó la contraseña, se aprovecha que
@@ -71,7 +76,7 @@ class PersonalController extends Controller
         ]);
         $this->logger->info('Ingresó del personal: {usuario}', ['usuario' => $persona['usuario']]);
 
-        return Response::redirect(self::INICIO, 303);
+        return Response::redirect($volver, 303);
     }
 
     /**
@@ -86,7 +91,22 @@ class PersonalController extends Controller
         return Response::redirect('/', 303);
     }
 
-    private function mostrar(string $usuario, ?string $error = null, int $estado = 200): Response
+    /**
+     * Adónde ir después de ingresar: la página del personal de la que vino, o el inicio del
+     * personal. Sólo una ruta de este sitio: «//otro.com» o «https://otro.com» lo dejarían usar
+     * como redirección abierta, para que un enlace con el dominio de la librería termine en una
+     * copia falsa del ingreso.
+     */
+    private static function volver(?string $volver): string
+    {
+        // Empieza con una sola barra (ni «//» ni «/\», que algunos navegadores leen como «//») y
+        // no tiene espacios, caracteres de control ni barras invertidas.
+        return $volver !== null && preg_match('#^/(?![/\\\\])[^\x00-\x20\\\\]*$#', $volver) === 1
+            ? $volver
+            : self::INICIO;
+    }
+
+    private function mostrar(string $usuario, string $volver, ?string $error = null, int $estado = 200): Response
     {
         return $this->render('personal/ingresar', [
             'title' => 'Ingreso del personal — PAWPrints',
@@ -95,6 +115,7 @@ class PersonalController extends Controller
             'pageClass' => 'page-personal',
             'extraCss' => ['personal.css'],
             'usuario' => $usuario,
+            'volver' => $volver,
             'error' => $error,
             'csrf' => $this->sesion->csrf(),
         ], $estado);

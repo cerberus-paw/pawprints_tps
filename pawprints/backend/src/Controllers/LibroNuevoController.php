@@ -15,7 +15,8 @@ use PawPrints\Models\LibroRepository;
 /**
  * La carga de libros nuevos (TP4, consigna 2): el formulario, con validaciones en línea en el
  * navegador (validador.js), y su envío, que el servidor vuelve a validar con las mismas reglas.
- * Desde el TP5 el libro queda guardado en la base y aparece en el catálogo.
+ * Desde el TP5 el libro queda guardado en la base y aparece en el catálogo, y la carga es sólo
+ * para el personal que ingresó con su usuario.
  */
 class LibroNuevoController extends Controller
 {
@@ -26,12 +27,17 @@ class LibroNuevoController extends Controller
     /** GET /libros/nuevo */
     public function formulario(Request $request): Response
     {
+        $this->exigirPersonal($request);
+
         return $this->mostrar([]);
     }
 
     /** POST /libros/nuevo */
     public function cargar(Request $request): Response
     {
+        $this->exigirPersonal($request);
+        $this->exigirCsrf($request);
+
         $campos = [];
         foreach (self::CAMPOS as $campo) {
             $campos[$campo] = $request->input($campo, '');
@@ -77,6 +83,8 @@ class LibroNuevoController extends Controller
      */
     public function confirmacion(Request $request): Response
     {
+        $this->exigirPersonal($request);
+
         $id = filter_var((string) $request->query('libro', ''), FILTER_VALIDATE_INT);
         $libro = $id === false ? null : $this->libros()->porId($id);
         if ($libro === null) {
@@ -153,6 +161,7 @@ class LibroNuevoController extends Controller
             'tapaEnviada' => $tapaEnviada,
             'generos' => array_keys($this->libros()->generos()),
             'formatos' => array_keys($this->libros()->formatos()),
+            'csrf' => $this->sesion->csrf(),
             'mensajes' => LibroNuevo::MENSAJES,
             'patronIsbn' => LibroNuevo::PATRON_ISBN,
             'limites' => [

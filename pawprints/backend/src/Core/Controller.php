@@ -21,6 +21,38 @@ abstract class Controller
     ) {
     }
 
+    /** Si la acción pasó por exigirPersonal(): App le agrega Cache-Control: no-store. */
+    private bool $soloPersonal = false;
+
+    /**
+     * Corta el pedido si no ingresó nadie del personal: lo manda al ingreso, que después lo trae
+     * de vuelta acá. Se llama al empezar cada acción del personal.
+     *
+     * @return array{id: int, usuario: string, nombre: string} quién ingresó
+     */
+    protected function exigirPersonal(Request $request): array
+    {
+        $personal = $this->sesion->personal();
+        if ($personal === null) {
+            // Un GET vuelve a la misma dirección, con su query. Un POST no se puede repetir
+            // después del ingreso: vuelve a la página del formulario.
+            $volver = $request->path();
+            if ($request->method() === 'GET' && $request->queryParams() !== []) {
+                $volver .= '?' . http_build_query($request->queryParams());
+            }
+            throw HttpException::redirect('/personal/ingresar?' . http_build_query(['volver' => $volver]));
+        }
+
+        $this->soloPersonal = true;
+
+        return $personal;
+    }
+
+    public function soloPersonal(): bool
+    {
+        return $this->soloPersonal;
+    }
+
     /**
      * Corta el pedido con un 400 si el formulario no trae el token CSRF de la sesión: el POST no
      * salió de una página del sitio.

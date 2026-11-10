@@ -81,6 +81,7 @@ $opciones = static function (array $lista, string $elegida): string {
            campo. validador.js lo agrega al arrancar y desde ahí muestra sus propios mensajes, que
            se ven igual en todos los navegadores. El servidor vuelve a validar todo igual. -->
       <form action="/libros/nuevo" method="post" enctype="multipart/form-data" aria-labelledby="titulo-libro-nuevo" data-validar>
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf) ?>">
 
         <fieldset>
           <legend>Datos del libro</legend>

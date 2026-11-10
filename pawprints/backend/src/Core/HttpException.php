@@ -23,6 +23,15 @@ final class HttpException extends RuntimeException
         parent::__construct($message, $status);
     }
 
+    /**
+     * No es un error: el pedido sigue en otra página, como el ingreso cuando falta la sesión. Va
+     * por excepción para que cualquier método del controlador pueda cortar el pedido ahí mismo.
+     */
+    public static function redirect(string $location): self
+    {
+        return new self(303, 'Sigue en otra página.', ['Location' => $location]);
+    }
+
     public static function badRequest(string $message): self
     {
         return new self(400, $message);
