@@ -61,6 +61,16 @@ final class View
             'pesos',
             static fn (int|string $monto): string => '$' . number_format((int) $monto, 0, ',', '.'),
         ));
+
+        // Un identificador válido para un id del HTML a partir de un texto, como el género de un
+        // filtro: «Ciencia Ficción» → «ciencia-ficcion». Twig no trae reemplazos con expresiones
+        // regulares, y armarlo en cada controlador lo repetiría.
+        $this->twig->addFilter(new TwigFilter(
+            'slug',
+            static fn (string $texto): string => preg_replace('/[^a-z0-9]+/', '-', strtolower(
+                strtr($texto, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n', '&' => 'y']),
+            )) ?? '',
+        ));
     }
 
     /** Un dato para todas las plantillas que se generen de acá en adelante. */
