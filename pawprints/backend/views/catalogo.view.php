@@ -252,7 +252,7 @@ $tarjeta = static function (?array $libro) use ($pesos): void {
         </ul>
 
         <?php if ($paginas > 1): ?>
-        <nav aria-label="Paginado del catálogo">
+        <nav class="paginado" aria-label="Paginado del catálogo">
           <ul>
             <?php if ($pagina > 1): ?>
             <li><a href="<?= $url('/catalogo', ['pagina' => $pagina - 1 > 1 ? (string) ($pagina - 1) : '']) ?>" rel="prev">&larr; Anterior</a></li>

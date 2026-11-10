@@ -451,6 +451,8 @@ export class FiltrosCatalogo {
   paginado(paginas) {
     const actual = this.estado.pagina;
     const nav = document.createElement('nav');
+    // La clase lleva el estilo, que comparte con el paginado de los pedidos (componentes.css).
+    nav.className = 'paginado';
     nav.setAttribute('aria-label', 'Paginado del catálogo');
     const lista = document.createElement('ul');
 

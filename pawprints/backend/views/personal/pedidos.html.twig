@@ -1,0 +1,72 @@
+{#
+  Listado de pedidos para el personal (TP5, consigna 3). Variables:
+    pedidos         — las reservas de esta página, como las devuelve ReservaRepository::listar()
+    total           — cuántas hay en total
+    pagina, paginas — para el paginado
+#}
+{% extends 'base.html.twig' %}
+
+{% block contenido %}
+  <main>
+
+    <section aria-labelledby="titulo-pedidos">
+      <h1 id="titulo-pedidos">Pedidos</h1>
+      <p>
+        {% if total == 0 %}
+          Todavía no llegó ninguna reserva desde el sitio.
+        {% else %}
+          {{ total }} {{ total == 1 ? 'reserva' : 'reservas' }}, de la más nueva a la más vieja.
+        {% endif %}
+      </p>
+
+      {% if pedidos is not empty %}
+        {# La tabla se desplaza de costado en una pantalla angosta, sin romper la página. #}
+        <div class="tabla-desplazable" tabindex="0" role="region" aria-labelledby="titulo-tabla-pedidos">
+          <table>
+            <caption id="titulo-tabla-pedidos">Reservas, página {{ pagina }} de {{ paginas }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">N.º</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Libro</th>
+                <th scope="col">Cant.</th>
+                <th scope="col">Cliente</th>
+                <th scope="col">Comentarios</th>
+                <th scope="col">Aviso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for p in pedidos %}
+                <tr>
+                  <th scope="row">{{ p.id }}</th>
+                  <td><time datetime="{{ p.creada|date('Y-m-d\\TH:i') }}">{{ p.creada|date('d/m/Y H:i') }}</time></td>
+                  <td><a href="/libros/{{ p.libro_id }}">{{ p.titulo }}</a><br><small>{{ p.autor }}</small></td>
+                  <td>{{ p.cantidad }}</td>
+                  <td>
+                    {{ p.nombre }}<br>
+                    <a href="mailto:{{ p.correo }}">{{ p.correo }}</a><br>
+                    {# En el href, sólo los números y el +: el resto es cómo lo escribió el cliente. #}
+                    <a href="tel:{{ p.telefono|replace({' ': '', '-': '', '(': '', ')': ''}) }}">{{ p.telefono }}</a>
+                  </td>
+                  {# Lo escribió el cliente: sale escapado, como todo lo que imprime Twig. Es el
+                     ejemplo de XSS almacenado de la consigna 5: un <script> en un comentario se
+                     ve como texto y no se ejecuta en la pantalla del personal. #}
+                  <td>{{ p.comentarios|nl2br }}</td>
+                  <td{% if not p.aviso_enviado %} class="aviso-pendiente"{% endif %}>{{ p.aviso_enviado ? 'Enviado' : 'Sin enviar' }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {{ include('partials/paginado.html.twig', {
+          etiqueta: 'Paginado de los pedidos',
+          ruta: '/personal/pedidos',
+          pagina: pagina,
+          paginas: paginas,
+        }) }}
+      {% endif %}
+    </section>
+
+  </main>
+{% endblock %}

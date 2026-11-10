@@ -94,3 +94,67 @@
     padding: var(--sp-6);
   }
 }
+
+/* ================================================================
+   PEDIDOS — el listado de reservas, una tabla ancha
+   ================================================================ */
+.page-pedidos main {
+  max-width: calc(var(--max-w) + 2 * var(--gutter));
+}
+
+/* En una pantalla angosta la tabla se desplaza de costado dentro de su
+   recuadro, en lugar de ensanchar toda la página. */
+.page-pedidos .tabla-desplazable {
+  overflow-x: auto;
+}
+
+.page-pedidos .tabla-desplazable:focus-visible {
+  outline: 3px solid var(--v500);
+  outline-offset: 2px;
+}
+
+.page-pedidos table {
+  width: 100%;
+  min-width: 52rem;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.page-pedidos caption {
+  text-align: left;
+  font-weight: 600;
+  color: var(--v800);
+  padding-bottom: var(--sp-3);
+}
+
+.page-pedidos th,
+.page-pedidos td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-pedidos thead th {
+  background: var(--v50);
+  color: var(--v800);
+  border-bottom: 2px solid var(--border-v);
+}
+
+.page-pedidos tbody tr:hover {
+  background: var(--cream);
+}
+
+.page-pedidos td a {
+  color: var(--v700);
+}
+
+.page-pedidos td small {
+  color: var(--muted);
+}
+
+/* Un aviso que no llegó al personal: hay que contactar al cliente a mano. */
+.page-pedidos .aviso-pendiente {
+  color: #C0392B;
+  font-weight: 600;
+}

@@ -94,7 +94,7 @@ class LibroNuevoController extends Controller
         return $this->render('libro-nuevo-confirmacion', [
             'title' => 'Libro cargado — PAWPrints',
             'description' => 'El libro nuevo ya está en el catálogo.',
-            'activePage' => '',
+            'activePage' => 'libro-nuevo',
             'pageClass' => 'page-libro-nuevo-confirmacion',
             'extraCss' => ['libro-nuevo.css'],
             'libro' => $libro,
@@ -152,7 +152,7 @@ class LibroNuevoController extends Controller
         return $this->render('libro-nuevo', [
             'title' => 'Cargar un libro nuevo — PAWPrints',
             'description' => 'Formulario del personal de PAWPrints para cargar un libro nuevo en el catálogo.',
-            'activePage' => '',
+            'activePage' => 'libro-nuevo',
             'pageClass' => 'page-libro-nuevo',
             'extraCss' => ['libro-nuevo.css'],
             'extraJs' => ['paginas/libro-nuevo.js'],
