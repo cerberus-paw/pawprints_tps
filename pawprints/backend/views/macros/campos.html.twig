@@ -1,0 +1,44 @@
+{#
+  Lo que se repite en cada campo de los formularios (la reserva y la carga de libros): cómo queda
+  marcado un control con error y cómo se muestra su mensaje, con la accesibilidad del TP4. Se
+  importan en la página:
+
+    {% import 'macros/campos.html.twig' as campos %}
+    <input type="text" id="titulo" name="titulo" value="{{ valores.titulo }}"{{ campos.atributos('titulo', errores) }}>
+    {{ campos.error('titulo', errores) }}
+
+  Son macros de atributos y no del campo entero porque cada control tiene los suyos (maxlength,
+  pattern, autocomplete, inputmode…) y una macro con todos sería más difícil de leer que el HTML.
+  El id del control y el nombre del campo son el mismo, salvo donde la página diga otra cosa.
+
+  Lo que devuelve una macro ya está escapado: se imprime con {{ }} sin |raw.
+#}
+
+{#
+  Los atributos de estado de un control, para pegar después de los suyos:
+  - data-error-*: los mensajes que muestra validador.js, los mismos del servidor (sólo en la
+    carga de libros, que es la que valida en el navegador);
+  - aria-describedby: la ayuda del campo, si tiene, y el mensaje de error, si hay uno. El lector
+    de pantalla lee los dos al enfocarlo;
+  - aria-invalid, con error: el CSS lo pinta sin necesitar una clase.
+#}
+{% macro atributos(campo, errores, ayuda = null, mensajes = {}) %}
+  {%- for tipo, texto in mensajes %} data-error-{{ tipo }}="{{ texto }}"{% endfor -%}
+  {%- set describe = [ayuda, errores[campo] is defined ? 'error-' ~ campo : null]|filter(id => id) -%}
+  {%- if describe is not empty %} aria-describedby="{{ describe|join(' ') }}"{% endif -%}
+  {%- if errores[campo] is defined %} aria-invalid="true"{% endif -%}
+{% endmacro %}
+
+{# El mensaje de error del campo, con el id al que apunta su aria-describedby. Nada si no hay. #}
+{% macro error(campo, errores, clase = null) %}
+  {%- if errores[campo] is defined -%}
+    <p id="error-{{ campo }}"{% if clase %} class="{{ clase }}"{% endif %}>{{ errores[campo] }}</p>
+  {%- endif -%}
+{% endmacro %}
+
+{# Las opciones de un <select> armadas desde una lista: el texto es también el valor. #}
+{% macro opciones(lista, elegida) %}
+  {%- for opcion in lista -%}
+    <option{% if opcion is same as(elegida) %} selected{% endif %}>{{ opcion }}</option>
+  {%- endfor -%}
+{% endmacro %}
