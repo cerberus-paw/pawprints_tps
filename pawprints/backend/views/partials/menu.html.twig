@@ -1,7 +1,8 @@
 {#
   La cabecera con el menú de navegación, el buscador y el acceso al carrito. Recibe activePage:
   el enlace de esa página lleva aria-current="page", que es lo que el CSS usa para marcarla y lo
-  que anuncia un lector de pantalla.
+  que anuncia un lector de pantalla. Con personal (lo comparte App con todas las vistas), suma lo
+  que sólo ve el personal.
 #}
   <header>
 
@@ -12,6 +13,17 @@
         <li><a href="/"{% if activePage == 'inicio' %} aria-current="page"{% endif %}>Inicio</a></li>
         <li><a href="/catalogo"{% if activePage == 'catalogo' %} aria-current="page"{% endif %}>Catálogo</a></li>
         <li><a href="/sobre-nosotros"{% if activePage == 'sobre-nosotros' %} aria-current="page"{% endif %}>Sobre Nosotros</a></li>
+        {% if personal %}
+          {# Sólo con la sesión del personal iniciada. Salir es un formulario con el token CSRF y
+             no un enlace: un GET lo podría disparar cualquier página. #}
+          <li><a href="/libros/nuevo">Cargar libro</a></li>
+          <li>
+            <form action="/personal/salir" method="post">
+              <input type="hidden" name="csrf" value="{{ personal.csrf }}">
+              <button type="submit" title="Salir de la sesión de {{ personal.nombre }}">Salir</button>
+            </form>
+          </li>
+        {% endif %}
       </ul>
     </nav>
 

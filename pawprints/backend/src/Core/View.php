@@ -23,6 +23,15 @@ final class View
     private readonly Environment $twig;
 
     /**
+     * Datos que ven todas las plantillas además de los suyos, como quién del personal ingresó,
+     * que cambia el menú. Arranca con las claves que esperan las plantillas, así existen aunque
+     * nadie las haya compartido (strict_variables).
+     *
+     * @var array<string, mixed>
+     */
+    private array $compartidos = ['personal' => null];
+
+    /**
      * @param string       $dir   la carpeta views/
      * @param string|false $cache dónde guarda Twig las plantillas compiladas, o false para no
      *                            guardarlas (en desarrollo, así un cambio se ve al recargar)
@@ -46,6 +55,12 @@ final class View
         ]);
     }
 
+    /** Un dato para todas las plantillas que se generen de acá en adelante. */
+    public function compartir(string $nombre, mixed $valor): void
+    {
+        $this->compartidos[$nombre] = $valor;
+    }
+
     /**
      * @param string               $template sin la extensión: «inicio» es views/inicio.html.twig
      *                                       o, si todavía no se migró, views/inicio.view.php
@@ -53,6 +68,9 @@ final class View
      */
     public function render(string $template, array $data = []): string
     {
+        // Lo que pasa el controlador gana sobre lo compartido.
+        $data += $this->compartidos;
+
         if (is_file("{$this->dir}/{$template}.html.twig")) {
             return $this->twig->render("{$template}.html.twig", $data);
         }

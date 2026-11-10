@@ -9,6 +9,7 @@
  * @var string $pageClass
  * @var array $extraCss
  * @var array $extraJs   módulos de frontend/js/ que necesita la página, por ejemplo 'paginas/inicio.js'
+ * @var array{nombre: string, csrf: string}|null $personal quién del personal ingresó (lo comparte App)
  */
 $title = $title ?? 'PAWPrints — Librería en Mercedes';
 $description = $description ?? 'Librería independiente en Mercedes, Buenos Aires.';
@@ -57,6 +58,15 @@ $assetPath = '/';
         <li><a href="/"<?= $activePage === 'inicio' ? ' aria-current="page"' : '' ?>>Inicio</a></li>
         <li><a href="/catalogo"<?= $activePage === 'catalogo' ? ' aria-current="page"' : '' ?>>Catálogo</a></li>
         <li><a href="/sobre-nosotros"<?= $activePage === 'sobre-nosotros' ? ' aria-current="page"' : '' ?>>Sobre Nosotros</a></li>
+<?php if (($personal ?? null) !== null): /* Lo mismo que partials/menu.html.twig. A la izquierda, para no sumar espacios al HTML de siempre. */ ?>
+        <li><a href="/libros/nuevo">Cargar libro</a></li>
+        <li>
+          <form action="/personal/salir" method="post">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars($personal['csrf']) ?>">
+            <button type="submit" title="Salir de la sesión de <?= htmlspecialchars($personal['nombre']) ?>">Salir</button>
+          </form>
+        </li>
+<?php endif; ?>
       </ul>
     </nav>
 
