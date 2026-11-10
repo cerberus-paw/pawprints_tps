@@ -1,0 +1,55 @@
+{#
+  La plantilla que heredan todas las páginas: el <head>, el menú y el pie (Punto 2 del TP3, antes
+  layouts/header.php y footer.php). Una página la extiende y completa los bloques:
+
+    {% extends 'base.html.twig' %}
+    {% block contenido %}…{% endblock %}
+
+  Variables que lee, todas optativas, las mismas que pasaban los controladores a header.php:
+    title, description  — el <title> y la descripción para los buscadores
+    activePage          — 'inicio' | 'catalogo' | 'sobre-nosotros', la que se marca en el menú
+    pageClass           — la clase del <body>, de la que cuelga el CSS propio de la página
+    extraCss, extraJs   — hojas de css/ y módulos de js/ que necesita la página
+
+  Los bloques title, description, css y js tienen un valor por defecto armado con esas
+  variables: una página puede reemplazarlos o sumarles algo con {{ parent() }}.
+#}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ title|default('PAWPrints — Librería en Mercedes') }}{% endblock %}</title>
+  <meta name="description" content="{% block description %}{{ description|default('Librería independiente en Mercedes, Buenos Aires.') }}{% endblock %}">
+  {# Sin un ícono declarado, el navegador pide /favicon.ico por su cuenta, que no existe, y la
+     consola muestra un 404 en cada página. #}
+  <link rel="icon" href="/img/pawprints-icono.svg" type="image/svg+xml">
+  {% block css %}
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/componentes.css">
+  {% for hoja in extraCss|default([]) %}
+    <link rel="stylesheet" href="/css/{{ hoja }}">
+  {% endfor %}
+  <link rel="stylesheet" href="/css/print.css" media="print">
+  {% endblock %}
+  {# Los módulos se ejecutan diferidos: pueden ir en el <head> sin frenar el dibujo de la página,
+     y cuando corren el HTML ya está entero. #}
+  {% block js %}
+  <script type="module" src="/js/componentes/historial-busquedas.js"></script>
+  {% for modulo in extraJs|default([]) %}
+    <script type="module" src="/js/{{ modulo }}"></script>
+  {% endfor %}
+  {% endblock %}
+</head>
+<body class="{{ pageClass|default('page-inicio') }}">
+
+  {{ include('partials/menu.html.twig', {activePage: activePage|default('inicio')}) }}
+
+  <hr>
+
+{% block contenido %}{% endblock %}
+
+  {{ include('partials/pie.html.twig') }}
+
+</body>
+</html>

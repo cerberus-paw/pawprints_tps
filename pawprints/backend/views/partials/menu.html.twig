@@ -1,0 +1,28 @@
+{#
+  La cabecera con el menú de navegación, el buscador y el acceso al carrito. Recibe activePage:
+  el enlace de esa página lleva aria-current="page", que es lo que el CSS usa para marcarla y lo
+  que anuncia un lector de pantalla.
+#}
+  <header>
+
+    <p><a href="/"><img src="/img/pawprints-icono.svg" alt="" width="22" height="32">PAWPrints — Librería</a></p>
+
+    <nav aria-label="Navegación principal">
+      <ul>
+        <li><a href="/"{% if activePage == 'inicio' %} aria-current="page"{% endif %}>Inicio</a></li>
+        <li><a href="/catalogo"{% if activePage == 'catalogo' %} aria-current="page"{% endif %}>Catálogo</a></li>
+        <li><a href="/sobre-nosotros"{% if activePage == 'sobre-nosotros' %} aria-current="page"{% endif %}>Sobre Nosotros</a></li>
+      </ul>
+    </nav>
+
+    <search>
+      <form action="/catalogo" method="get">
+        <label for="busqueda">Buscar libros</label>
+        <input type="search" id="busqueda" name="q" placeholder="Título, autor o género">
+        <button type="submit">Buscar</button>
+      </form>
+    </search>
+
+    <p><a href="#carrito">Carrito</a></p>
+
+  </header>
