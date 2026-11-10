@@ -1,11 +1,7 @@
-<?php
-/**
- * Vista de Reserva recibida — PAWPrints
- * Tarea 5: a dónde lleva el 303 después de una reserva que salió bien (Mateo)
- */
-require __DIR__ . '/layouts/header.php';
-?>
+{# Adónde lleva el 303 después de una reserva que salió bien (TP3, punto 5; Mateo). #}
+{% extends 'base.html.twig' %}
 
+{% block contenido %}
   <main>
 
     <section aria-labelledby="titulo-confirmacion">
@@ -25,6 +21,4 @@ require __DIR__ . '/layouts/header.php';
     </section>
 
   </main>
-
-<?php
-require __DIR__ . '/layouts/footer.php';
+{% endblock %}
