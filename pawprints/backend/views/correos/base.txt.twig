@@ -1,0 +1,15 @@
+{#
+  La base de los correos del sitio, que son de texto plano: un correo la extiende, escribe su
+  texto en el bloque «cuerpo» y, si cierra distinto, reemplaza la «firma».
+
+  Por la extensión .txt, Twig no escapa nada (View usa la estrategia «name»): un & que escribió
+  el cliente tiene que llegar como &, y no como &amp;. Es seguro porque el correo va como
+  text/plain y ningún programa de correo lo interpreta como HTML.
+
+  Twig se come el salto de línea que sigue a cada etiqueta, igual que PHP: por eso las etiquetas
+  van al final de la línea anterior o solas en la suya.
+#}
+{% block cuerpo %}{% endblock %}
+{% block firma %}
+PAWPrints — Librería
+{% endblock %}

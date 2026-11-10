@@ -1,0 +1,25 @@
+{#
+  El aviso al personal de una reserva nueva. Responderlo le escribe directo al cliente.
+
+  Variables: reserva (PawPrints\Models\Reserva) y numero, el de la reserva guardada, con el que
+  se la encuentra en el listado de pedidos.
+#}
+{% extends 'correos/base.txt.twig' %}
+{% block cuerpo %}
+Llegó la reserva #{{ numero }} desde el sitio.
+
+Libro:     {{ reserva.libro.titulo }} — {{ reserva.libro.autor }} (id {{ reserva.libro.id }})
+Cantidad:  {{ reserva.cantidad }}
+Precio:    {{ reserva.libro.precio|pesos }} c/u, {{ reserva.total()|pesos }} en total
+
+Nombre:    {{ reserva.nombre }}
+Correo:    {{ reserva.email }}
+Teléfono:  {{ reserva.telefono }}
+
+Comentarios:
+{{ reserva.comentarios is not empty ? reserva.comentarios : '(sin comentarios)' }}
+
+{% endblock %}
+{% block firma %}
+Respondiendo este correo le escribís directo a {{ reserva.nombre }}.
+{% endblock %}
