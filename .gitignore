@@ -7,6 +7,11 @@ pawprints/backend/logs/*.log
 # Los correos que guarda el transporte «archivo» en desarrollo.
 pawprints/backend/logs/correos/
 
+# Las dependencias de Composer (composer.lock sí se versiona, para instalar las mismas versiones
+# en todos lados) y la caché de las plantillas de Twig.
+pawprints/backend/vendor/
+pawprints/backend/cache/
+
 # Las tapas que se cargan desde el formulario (se versiona sólo el .gitkeep).
 pawprints/frontend/img/tapas/*
 !pawprints/frontend/img/tapas/.gitkeep
