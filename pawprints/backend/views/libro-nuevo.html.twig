@@ -1,0 +1,168 @@
+{#
+  La carga de libros nuevos del personal (TP4, consigna 2; TP5, consigna 3), con las
+  validaciones y devoluciones en línea de validador.js.
+
+  Variables (LibroNuevoController::mostrar):
+    valores     — lo que ya escribió el usuario, para no hacérselo escribir de nuevo
+    errores     — campo => mensaje, de la validación del servidor
+    tapaEnviada — si el envío con errores traía una tapa, que el navegador no conserva
+    generos, formatos — las opciones de los desplegables
+    csrf        — el token de la sesión, que vuelve con el formulario
+    mensajes    — los de LibroNuevo::MENSAJES: campo => tipo => texto
+    patronIsbn  — el pattern del ISBN
+    limites     — campo => máximo (de caracteres, o el valor máximo en el precio y el stock)
+#}
+{% extends 'base.html.twig' %}
+{% import 'macros/campos.html.twig' as campos %}
+
+{% block contenido %}
+{#
+  Los mensajes de cada campo que puede detectar el navegador, para los data-error-* de
+  validador.js: «lista» y «repetido» los decide el servidor, que conoce el catálogo, y
+  «caracteres» no tiene un atributo del HTML que lo controle.
+#}
+{% set enNavegador = mensajes|map(porTipo => porTipo|filter((texto, tipo) => tipo not in ['lista', 'repetido', 'caracteres'])) %}
+  <main>
+
+    <section aria-labelledby="titulo-libro-nuevo">
+      <h1 id="titulo-libro-nuevo">Cargar un libro nuevo</h1>
+      <p>
+        Para el personal de la librería: completá los datos del libro tal como
+        van a aparecer en el catálogo. Los campos con <abbr title="campo obligatorio">*</abbr>
+        son obligatorios.
+      </p>
+
+      {# El resumen de errores. Está siempre, oculto si no hay nada que mostrar, para que el
+         lector de pantalla anuncie lo que validador.js escriba adentro: role="alert" funciona
+         mejor sobre un elemento que ya existe. #}
+      <div class="resumen-errores" role="alert" data-resumen-errores{% if errores is empty %} hidden{% endif %}>
+        {% if errores is not empty %}
+        <p>Revisá estos datos antes de cargar el libro:</p>
+        <ul>
+          {% for campo, texto in errores %}
+          <li><a href="#{{ campo }}">{{ texto }}</a></li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </div>
+
+      {# Sin novalidate en el HTML: sin JavaScript, el navegador valida con los atributos de cada
+         campo. validador.js lo agrega al arrancar y desde ahí muestra sus propios mensajes, que
+         se ven igual en todos los navegadores. El servidor vuelve a validar todo igual. #}
+      <form action="/libros/nuevo" method="post" enctype="multipart/form-data" aria-labelledby="titulo-libro-nuevo" data-validar>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+
+        <fieldset>
+          <legend>Datos del libro</legend>
+
+          <div class="campo">
+            <label for="titulo">Título <abbr title="campo obligatorio">*</abbr></label>
+            <input type="text" id="titulo" name="titulo" value="{{ valores.titulo }}"
+                   required maxlength="{{ limites.titulo }}"{{ campos.atributos('titulo', errores, null, enNavegador.titulo) }}>
+            {{ campos.error('titulo', errores, 'error-campo') }}
+          </div>
+
+          <div class="campo">
+            <label for="autor">Autor <abbr title="campo obligatorio">*</abbr></label>
+            <input type="text" id="autor" name="autor" value="{{ valores.autor }}"
+                   required maxlength="{{ limites.autor }}"{{ campos.atributos('autor', errores, null, enNavegador.autor) }}>
+            {{ campos.error('autor', errores, 'error-campo') }}
+          </div>
+
+          <div class="fila">
+            <div class="campo">
+              <label for="genero">Género <abbr title="campo obligatorio">*</abbr></label>
+              <select id="genero" name="genero" required{{ campos.atributos('genero', errores, null, enNavegador.genero) }}>
+                <option value="">— Elegí un género —</option>
+                {{ campos.opciones(generos, valores.genero) }}
+              </select>
+              {{ campos.error('genero', errores, 'error-campo') }}
+            </div>
+
+            <div class="campo">
+              <label for="formato">Formato <abbr title="campo obligatorio">*</abbr></label>
+              <select id="formato" name="formato" required{{ campos.atributos('formato', errores, null, enNavegador.formato) }}>
+                <option value="">— Elegí un formato —</option>
+                {{ campos.opciones(formatos, valores.formato) }}
+              </select>
+              {{ campos.error('formato', errores, 'error-campo') }}
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="isbn">ISBN <abbr title="campo obligatorio">*</abbr></label>
+            {# data-regla="isbn": además del formato, validador.js controla el dígito verificador
+               con la regla que le registra la página (js/paginas/libro-nuevo.js). #}
+            <input type="text" id="isbn" name="isbn" value="{{ valores.isbn }}"
+                   required pattern="{{ patronIsbn }}" inputmode="numeric"
+                   autocomplete="off" placeholder="978-987-1234-56-1" data-regla="isbn"{{ campos.atributos('isbn', errores, 'ayuda-isbn', enNavegador.isbn) }}>
+            <small id="ayuda-isbn">Los 13 números del código de barras. Los guiones son opcionales.</small>
+            {{ campos.error('isbn', errores, 'error-campo') }}
+          </div>
+
+          <div class="campo campo-tapa" data-zona-arrastre>
+            <label for="tapa">Tapa del libro</label>
+            <input type="file" id="tapa" name="tapa" accept="image/jpeg,image/png,image/webp"{{ campos.atributos('tapa', errores, 'ayuda-tapa', enNavegador.tapa) }}>
+            <small id="ayuda-tapa">Formatos: JPG, PNG o WebP. Hasta 2 MB.</small>
+            {{ campos.error('tapa', errores, 'error-campo') }}
+            {% if errores is not empty and errores.tapa is not defined %}
+            <p id="aviso-tapa" class="aviso-campo aviso-reingreso-tapa" role="status">
+              {{ tapaEnviada
+                ? 'Tenés que volver a elegir la tapa: por seguridad el navegador no la conserva al volver con errores.'
+                : 'Si habías seleccionado una tapa, tenés que volver a elegirla: por seguridad el navegador no la conserva al volver con errores.' }}
+            </p>
+            {% endif %}
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Precio y stock</legend>
+
+          <div class="fila">
+            <div class="campo">
+              <label for="precio">Precio <abbr title="campo obligatorio">*</abbr></label>
+              <input type="number" id="precio" name="precio" value="{{ valores.precio }}"
+                     required min="1" max="{{ limites.precio }}" step="1" inputmode="numeric"{{ campos.atributos('precio', errores, 'ayuda-precio', enNavegador.precio) }}>
+              <small id="ayuda-precio">En pesos, sin centavos.</small>
+              {{ campos.error('precio', errores, 'error-campo') }}
+            </div>
+
+            <div class="campo">
+              <label for="stock">Stock <abbr title="campo obligatorio">*</abbr></label>
+              <input type="number" id="stock" name="stock" value="{{ valores.stock }}"
+                     required min="0" max="{{ limites.stock }}" step="1" inputmode="numeric"{{ campos.atributos('stock', errores, 'ayuda-stock', enNavegador.stock) }}>
+              <small id="ayuda-stock">Ejemplares disponibles en la tienda.</small>
+              {{ campos.error('stock', errores, 'error-campo') }}
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Texto del catálogo</legend>
+
+          <div class="campo">
+            <label for="resumen">Resumen <abbr title="campo obligatorio">*</abbr></label>
+            <textarea id="resumen" name="resumen" rows="3" required
+                      maxlength="{{ limites.resumen }}"{{ campos.atributos('resumen', errores, 'ayuda-resumen', enNavegador.resumen) }}>{{ valores.resumen }}</textarea>
+            <small id="ayuda-resumen">Una o dos oraciones: es lo que se lee en el listado del catálogo. Hasta {{ limites.resumen }} caracteres.</small>
+            {{ campos.error('resumen', errores, 'error-campo') }}
+          </div>
+
+          <div class="campo">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion" rows="6"
+                      maxlength="{{ limites.descripcion }}"{{ campos.atributos('descripcion', errores, 'ayuda-descripcion', enNavegador.descripcion) }}>{{ valores.descripcion }}</textarea>
+            <small id="ayuda-descripcion">El texto completo de la ficha del libro. Si queda vacía, la ficha muestra el resumen.</small>
+            {{ campos.error('descripcion', errores, 'error-campo') }}
+          </div>
+        </fieldset>
+
+        <div>
+          <button type="submit">Cargar libro</button>
+        </div>
+
+      </form>
+    </section>
+
+  </main>
+{% endblock %}

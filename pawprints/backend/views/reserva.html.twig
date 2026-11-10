@@ -1,0 +1,161 @@
+{#
+  El formulario de reserva (TP3, punto 5; Mateo), que guarda la reserva y avisa al personal.
+
+  Variables (ReservaController::mostrar):
+    libros        — los del desplegable: id, titulo, autor y precio
+    libro         — el de la tarjeta de resumen, o null
+    valores       — lo que ya escribió el usuario, para no hacérselo escribir de nuevo
+    errores       — campo => mensaje; «envio» si no se pudo guardar
+    maxEjemplares — el tope de la cantidad
+    trampa        — el nombre del campo trampa para bots
+#}
+{% extends 'base.html.twig' %}
+{% import 'macros/campos.html.twig' as campos %}
+
+{% block contenido %}
+{# El id del control de cada campo, para que el resumen de errores enlace a él. #}
+{% set controles = {libro_id: 'libro'} %}
+  <main>
+
+    <section aria-labelledby="titulo-reserva">
+      <h1 id="titulo-reserva">Formulario de Reserva</h1>
+      <p>
+        Reservá tu ejemplar de manera gratuita y retiralo en nuestra
+        librería física en Mercedes cuando te convenga.
+      </p>
+    </section>
+
+    <section aria-label="Contenido de la página de reserva">
+
+      <article aria-labelledby="subtitulo-formulario">
+        <h2 id="subtitulo-formulario" hidden>Datos de la reserva</h2>
+
+        {% if errores.envio is defined %}
+        <p role="alert">{{ errores.envio }}</p>
+        {% elseif errores is not empty %}
+        {# role="alert" hace que el lector de pantalla lo anuncie apenas carga la página. #}
+        <div role="alert">
+          <p>Revisá estos datos antes de enviar la reserva:</p>
+          <ul>
+            {% for campo, texto in errores %}
+            <li><a href="#{{ controles[campo] ?? campo }}">{{ texto }}</a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        {# Sin novalidate: el navegador valida primero con los atributos de cada campo, y el
+           servidor vuelve a validar todo, porque lo del navegador se saltea fácil. #}
+        <form action="/reserva" method="post" aria-labelledby="titulo-reserva">
+
+          <fieldset>
+            <legend>Datos del solicitante</legend>
+
+            <div>
+              <label for="nombre">Nombre completo <abbr title="campo obligatorio">*</abbr></label>
+              <input type="text" id="nombre" name="nombre" value="{{ valores.nombre }}"
+                     placeholder="Ej. Juan Pérez García" required maxlength="100"
+                     autocomplete="name"{{ campos.atributos('nombre', errores) }}>
+              {{ campos.error('nombre', errores) }}
+            </div>
+
+            <div>
+              <div>
+                <label for="email">Correo electrónico <abbr title="campo obligatorio">*</abbr></label>
+                <input type="email" id="email" name="email" value="{{ valores.email }}"
+                       placeholder="juan.perez@ejemplo.com" required maxlength="254"
+                       autocomplete="email"{{ campos.atributos('email', errores) }}>
+                {{ campos.error('email', errores) }}
+              </div>
+
+              <div>
+                <label for="telefono">Teléfono de contacto <abbr title="campo obligatorio">*</abbr></label>
+                <input type="tel" id="telefono" name="telefono" value="{{ valores.telefono }}"
+                       placeholder="+54 9 11 1234-5678" required maxlength="20"
+                       pattern="[\+]?[\d\s\-\(\)]{7,20}" autocomplete="tel"{{ campos.atributos('telefono', errores) }}>
+                {{ campos.error('telefono', errores) }}
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Datos del libro</legend>
+
+            <div>
+              <label for="libro">Seleccioná el libro a reservar <abbr title="campo obligatorio">*</abbr></label>
+              {# Lista cerrada armada desde el catálogo: el value es el id del libro. #}
+              <select id="libro" name="libro_id" required{{ campos.atributos('libro_id', errores) }}>
+                <option value="" disabled{% if libro is null %} selected{% endif %}>— Seleccioná un libro —</option>
+                {% for opcion in libros %}
+                <option value="{{ opcion.id }}"{% if opcion.id is same as(libro.id ?? null) %} selected{% endif %}>{{ opcion.titulo }} — {{ opcion.autor }}</option>
+                {% endfor %}
+              </select>
+              {{ campos.error('libro_id', errores) }}
+            </div>
+
+            <div>
+              <label for="cantidad">Cantidad <abbr title="campo obligatorio">*</abbr></label>
+              <input type="number" id="cantidad" name="cantidad" value="{{ valores.cantidad }}"
+                     min="1" max="{{ maxEjemplares }}" required{{ campos.atributos('cantidad', errores) }}>
+              {{ campos.error('cantidad', errores) }}
+              <small>Máximo {{ maxEjemplares }} ejemplares por reserva.</small>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Información adicional</legend>
+
+            <div>
+              <label for="comentarios">Comentarios adicionales</label>
+              <textarea id="comentarios" name="comentarios" rows="5" maxlength="500"
+                        placeholder="¿Deseás que lo envolvamos para regalo? ¿Alguna instrucción sobre la recogida?"{{ campos.atributos('comentarios', errores) }}>{{ valores.comentarios }}</textarea>
+              {{ campos.error('comentarios', errores) }}
+            </div>
+          </fieldset>
+
+          {# Trampa para bots: hidden la saca de la vista y del lector de pantalla, así que sólo la
+             completa un programa que llena todos los campos que encuentra. #}
+          <div hidden>
+            <label for="{{ trampa }}">No completar este campo</label>
+            <input type="text" id="{{ trampa }}" name="{{ trampa }}" tabindex="-1" autocomplete="off">
+          </div>
+
+          <div>
+            <button type="submit">Enviar Reserva</button>
+          </div>
+
+        </form>
+      </article>
+
+      <aside aria-labelledby="titulo-resumen-libro">
+        <h2 id="titulo-resumen-libro" hidden>Resumen del libro</h2>
+
+        {# Sin JavaScript la tarjeta no sigue al desplegable: muestra el libro con el que se llegó
+           (desde su detalle) o el que se eligió antes de un error. El TP4 la actualiza. #}
+        <article{% if libro %} aria-labelledby="nombre-libro-resumen"{% endif %}>
+          {% if libro %}
+          <header>
+            <p><strong>Libro {{ libro.id }}</strong></p>
+            <h3 id="nombre-libro-resumen">{{ libro.titulo }}</h3>
+            <p>{{ libro.autor }}</p>
+            <p><strong><data value="{{ libro.precio }}">{{ libro.precio|pesos }}</data></strong></p>
+          </header>
+
+          <hr>
+          {% endif %}
+
+          <section aria-labelledby="titulo-beneficios">
+            <h3 id="titulo-beneficios" hidden>Beneficios de reservar en tienda</h3>
+            <ul>
+              <li>Te guardamos el libro por 10 días hábiles.</li>
+              <li>Te llega un correo con el detalle de la reserva.</li>
+              <li>Pago directo al retirarlo en la tienda física.</li>
+            </ul>
+          </section>
+        </article>
+      </aside>
+
+    </section>
+
+  </main>
+{% endblock %}

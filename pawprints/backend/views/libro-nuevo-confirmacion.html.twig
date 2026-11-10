@@ -1,0 +1,62 @@
+{#
+  Lo que quedó guardado en el catálogo después de una carga de libro que pasó todas las
+  validaciones (TP4, consigna 2, y TP5).
+
+  Variables (LibroNuevoController::confirmacion):
+    libro   — como lo devuelve LibroRepository::porId()
+    sinTapa — si se cargó sin imagen de tapa
+#}
+{% extends 'base.html.twig' %}
+
+{% block contenido %}
+  <main>
+
+    <section aria-labelledby="titulo-confirmacion">
+      <h1 id="titulo-confirmacion">El libro ya está en el catálogo</h1>
+      <p>
+        Pasó todas las validaciones y quedó guardado. Ya se puede buscar y reservar
+        desde el sitio.
+      </p>
+
+      <dl>
+        <dt>Título</dt>
+        <dd>{{ libro.titulo }}</dd>
+        <dt>Autor</dt>
+        <dd>{{ libro.autor }}</dd>
+        <dt>Género</dt>
+        <dd>{{ libro.genero }}</dd>
+        <dt>Formato</dt>
+        <dd>{{ libro.formato }}</dd>
+        <dt>ISBN</dt>
+        <dd>{{ libro.isbn }}</dd>
+        <dt>Precio</dt>
+        <dd><data value="{{ libro.precio }}">{{ libro.precio|pesos }}</data></dd>
+        <dt>Stock</dt>
+        <dd>{{ libro.stock }} {{ libro.stock == 1 ? 'ejemplar' : 'ejemplares' }}</dd>
+        <dt>Resumen</dt>
+        {# nl2br después del escape: los saltos de línea que escribió el personal pasan a <br>, y
+           el resto del texto sale escapado. #}
+        <dd>{{ libro.resumen|nl2br }}</dd>
+        {% if libro.descripcion != '' %}
+        <dt>Descripción</dt>
+        <dd>{{ libro.descripcion|nl2br }}</dd>
+        {% endif %}
+        <dt>Tapa</dt>
+        {% if sinTapa %}
+        <dd>Sin tapa: en el catálogo se muestra una genérica.</dd>
+        {% else %}
+        <dd>
+          <img src="/img/{{ libro.imagen }}" alt="Tapa de {{ libro.titulo }}" width="120" height="170" style="max-width: 120px; height: auto; border-radius: var(--r-md); box-shadow: var(--sh-md); display: block; margin-bottom: var(--sp-2);">
+        </dd>
+        {% endif %}
+      </dl>
+
+      <ul>
+        <li><a href="/libros/{{ libro.id }}">Ver la ficha del libro</a></li>
+        <li><a href="/libros/nuevo">Cargar otro libro</a></li>
+        <li><a href="/catalogo">Ver el catálogo</a></li>
+      </ul>
+    </section>
+
+  </main>
+{% endblock %}
