@@ -12,6 +12,7 @@ estado con el que se entregó.
 | [TP2](#tp2--estilos) | Identidad visual y CSS | `tp2` |
 | [TP3](#tp3--programación-backend-1) | Backend en PHP con MVC | `TP3-v3.0.0` |
 | [TP4](#tp4--programación-frontend) | Componentes propios en JavaScript | `tp4` |
+| [TP5](#tp5--programación-backend-2) | Base de datos, Twig y seguridad | `tp5` |
 
 ## Estructura del repositorio
 
@@ -920,6 +921,80 @@ Y en el servidor, después de cargar un libro con tapa desde el sitio:
 ```bash
 ls -l /var/www/pawprints/pawprints/frontend/img/tapas/   # la tapa, con dueño www-data
 ```
+
+## TP5 — Programación Backend 2
+
+### 5. Inyección SQL
+
+> ¿Qué es un ataque de inyección SQL? ¿Cómo puede evitarse? Realice las modificaciones necesarias en su aplicación para protegerse de dichos ataques.
+
+#### Qué es
+
+Una inyección SQL pasa cuando la aplicación arma una consulta **pegando en el texto del SQL** algo
+que escribió el usuario. Si ese dato trae comillas o palabras de SQL, deja de ser un dato y pasa a
+ser parte de la consulta: el atacante la reescribe y la base ejecuta lo que él quiere, con los
+permisos del sitio.
+
+Por ejemplo, si el buscador del catálogo armara la consulta así:
+
+```php
+$sql = "SELECT id, titulo, autor FROM libros WHERE titulo LIKE '%{$q}%'";
+```
+
+buscar `%' UNION SELECT id, usuario, clave_hash FROM personal -- ` la convierte en
+
+```sql
+SELECT id, titulo, autor FROM libros WHERE titulo LIKE '%%'
+UNION SELECT id, usuario, clave_hash FROM personal -- %'
+```
+
+y el listado del catálogo mostraría los usuarios del personal y los hashes de sus contraseñas. El
+`--` comenta lo que sobra de la consulta original. Con la misma idea se puede:
+
+- **Leer cualquier tabla**: las reservas, con el nombre, el correo y el teléfono de cada cliente.
+- **Saltear el ingreso**: si el ingreso buscara `WHERE usuario = '{$usuario}'`, el usuario
+  `x' UNION SELECT 1, 'admin', 'Admin', '<un hash conocido>' -- ` hace que la base devuelva una
+  persona inventada con una contraseña que el atacante conoce.
+- **Cambiar o borrar datos**, o la base entera, si el usuario de la base tiene permiso.
+- **Averiguar la estructura** de la base con los mensajes de error, si la página los muestra.
+
+#### Cómo se evita
+
+1. **Consultas preparadas.** La consulta va al servidor con marcadores (`?` o `:nombre`) y los
+   datos van aparte. La base ya analizó el SQL antes de ver los datos, así que un dato nunca se
+   interpreta como SQL: `' OR '1'='1` se busca como texto, letra por letra.
+2. **Listas cerradas para lo que no puede ser un parámetro.** Un nombre de columna o un `ASC`/`DESC`
+   no se pueden pasar como parámetro. Para eso, el dato del usuario sólo elige una opción de una
+   lista escrita en el código, y lo que va al SQL es la opción, nunca el dato. Los números (como el
+   `LIMIT`) se validan como enteros y van como parámetros de tipo entero.
+3. **Permisos mínimos.** El usuario con el que se conecta el sitio sólo puede hacer lo que el sitio
+   necesita. Si algo se escapara, el daño queda acotado a eso.
+4. **No mostrar los errores de la base.** Un mensaje de MySQL en la pantalla le cuenta al atacante
+   cómo es la consulta y qué tablas hay.
+
+No sirve **filtrar la entrada** (sacar comillas o palabras como `DROP` y `OR`): siempre hay otra
+forma de escribir lo mismo, y rompe búsquedas legítimas, como un libro con «O'Connor» en el título.
+
+#### En PAWPrints
+
+- **Todas las consultas son preparadas**, y los datos del pedido van siempre como parámetros: la
+  búsqueda, los filtros y el paginado en
+  [`LibroRepository`](pawprints/backend/src/Models/LibroRepository.php), la reserva y el listado de
+  pedidos en [`ReservaRepository`](pawprints/backend/src/Models/ReservaRepository.php), y el
+  ingreso en [`PersonalRepository`](pawprints/backend/src/Models/PersonalRepository.php). En la
+  búsqueda, además, el `%` y el `_` se escapan, así buscar `%` no trae el catálogo entero.
+- **Preparadas de verdad**: [`Database`](pawprints/backend/src/Core/Database.php) desactiva la
+  emulación de PDO (`PDO::ATTR_EMULATE_PREPARES => false`), así la consulta y los datos viajan por
+  separado hasta MySQL, y no es PDO el que los junta en un texto.
+- **Listas cerradas**: el orden del catálogo (`?orden=precio-desc`) sale de un `match` con las
+  opciones del desplegable, y cualquier otro valor deja el orden por defecto. La cantidad por
+  página es una de `LibroRepository::CANTIDADES`, y la página, un entero validado.
+- **Permisos mínimos** en [`esquema.sql`](pawprints/backend/db/esquema.sql): el usuario `pawprints`
+  sólo puede leer e insertar libros, y leer, insertar y actualizar reservas y personal. No puede
+  borrar filas (el sitio nunca borra nada), ni crear, cambiar o borrar tablas, ni dar permisos. Las
+  tablas las crea `root`, sólo al instalar.
+- **Los errores no se muestran**: si una consulta falla, la persona ve la página de error genérica
+  y el detalle queda en el log ([consigna 6 del TP3](#6-errores)).
 
 ## Entorno de desarrollo
 
