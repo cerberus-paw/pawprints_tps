@@ -42,6 +42,35 @@ final class App
         500 => ['Algo se rompió de nuestro lado', 'No pudimos completar lo que pediste. El error ya quedó registrado y lo vamos a revisar.'],
     ];
 
+    /**
+     * La Content-Security-Policy de todas las respuestas (TP5, consigna 6). Le dice al navegador
+     * de dónde puede cargar cada cosa la página; lo demás no se ejecuta ni se carga. Si un XSS
+     * llegara a meter un <script> o un onerror= en el HTML, el navegador no lo corre: no se
+     * permite ningún script en línea, sólo los módulos de /js/.
+     *
+     * - default-src 'self': todo lo que no se nombra abajo, sólo del propio sitio.
+     * - img-src: además, las tapas de Open Library (TP5, consigna 7), «blob:» para la vista
+     *   previa de la tapa que se va a cargar y «data:» para las flechas de los desplegables, que
+     *   son SVG dentro del CSS.
+     * - style-src y font-src: la tipografía de Google Fonts que importa base.css. Sin
+     *   'unsafe-inline': tampoco se aplican los style= del HTML.
+     * - frame-src: el mapa de Google Maps de «Sobre nosotros».
+     * - object-src 'none' y base-uri 'self': sin <object>/<embed>, y un <base> inyectado no
+     *   puede mandar los enlaces y los scripts relativos a otro sitio.
+     * - form-action 'self': un formulario inyectado no puede mandar los datos a otro lado.
+     * - frame-ancestors 'none': ningún sitio puede mostrar PAWPrints dentro de un iframe, para
+     *   que no le hagan clic al personal sin que se dé cuenta.
+     */
+    private const CSP = "default-src 'self'; "
+        . "img-src 'self' data: blob: https://covers.openlibrary.org; "
+        . "style-src 'self' https://fonts.googleapis.com; "
+        . 'font-src https://fonts.gstatic.com; '
+        . 'frame-src https://www.google.com; '
+        . "object-src 'none'; "
+        . "base-uri 'self'; "
+        . "form-action 'self'; "
+        . "frame-ancestors 'none'";
+
     public function __construct(
         private readonly Router $router,
         private readonly View $view,
@@ -167,6 +196,13 @@ final class App
             ob_end_clean();
             $response = $this->errorResponse($error, $request);
         }
+
+        // En todas las respuestas, también en las de error y en las redirecciones.
+        // nosniff: el navegador respeta el Content-Type y no adivina otro, así un texto o un JSON
+        // con HTML adentro nunca se interpreta como una página.
+        $response = $response
+            ->withHeader('Content-Security-Policy', self::CSP)
+            ->withHeader('X-Content-Type-Options', 'nosniff');
 
         // Una línea por pedido, sin la query ni el cuerpo: alcanza para ver qué falla o qué anda
         // lento, y no guarda lo que escribió el usuario (en la reserva van sus datos personales).
