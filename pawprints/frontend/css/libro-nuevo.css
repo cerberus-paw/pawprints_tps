@@ -419,6 +419,17 @@
   line-height: 1.6;
 }
 
+/* La tapa que se acaba de cargar, chica, al lado de su «Tapa». Estaba en un style= de la vista,
+   que la Content-Security-Policy del TP5 no deja aplicar. */
+.page-libro-nuevo-confirmacion .tapa-cargada {
+  display: block;
+  max-width: 120px;
+  height: auto;
+  margin-bottom: var(--sp-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--sh-md);
+}
+
 .page-libro-nuevo-confirmacion main ul {
   display: flex;
   flex-wrap: wrap;
