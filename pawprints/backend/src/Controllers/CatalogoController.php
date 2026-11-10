@@ -54,8 +54,9 @@ class CatalogoController extends Controller
     public function index(Request $request): Response
     {
         $filtros = $this->filtros($request);
-        $resultados = $this->libros()->buscar($filtros);
-        $total = count($resultados);
+        // Primero el total, para saber cuántas páginas hay, y después sólo los libros de la
+        // página pedida: la base filtra y corta, y no viaja el catálogo entero en cada pedido.
+        $total = $this->libros()->total($filtros);
         $porPagina = self::porPagina($request);
 
         // Sin resultados sigue habiendo una página 1, que es la que muestra «no encontramos nada».
@@ -79,7 +80,7 @@ class CatalogoController extends Controller
             'pageClass' => 'page-catalogo',
             'extraCss' => ['catalogo.css'],
             'extraJs' => ['paginas/catalogo.js'],
-            'libros' => array_slice($resultados, ($pagina - 1) * $porPagina, $porPagina),
+            'libros' => $this->libros()->buscar($filtros, $porPagina, ($pagina - 1) * $porPagina),
             'total' => $total,
             'pagina' => $pagina,
             'paginas' => $paginas,
