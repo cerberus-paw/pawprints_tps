@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace PawPrints\Core;
 
 use LogicException;
-use Throwable;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFilter;
@@ -15,9 +14,9 @@ use Twig\TwigFilter;
  * pasa el controlador llega a la plantilla como variable. Devuelve un string y no imprime, así el
  * controlador todavía puede elegir el estado de la Response.
  *
- * Desde el TP5 las plantillas son de Twig (.html.twig). Mientras dura la migración conviven con
- * las .view.php del TP3: se busca primero la de Twig y, si no está, la de PHP. Así cada página se
- * pasa por separado y ningún controlador cambia.
+ * Desde el TP5 las plantillas son de Twig: .html.twig las páginas y .txt.twig los correos, que
+ * son de texto plano. El controlador nombra la plantilla sin la extensión, así que pasar del
+ * .view.php del TP3 a Twig no cambió ningún controlador.
  */
 final class View
 {
@@ -45,9 +44,11 @@ final class View
         bool $debug = false,
     ) {
         $this->twig = new Environment(new FilesystemLoader($dir), [
-            // Todo lo que se imprime con {{ }} sale escapado para HTML salvo que se pida lo
-            // contrario: es la defensa principal contra el XSS (TP5, consigna 5).
-            'autoescape' => 'html',
+            // El escape sale de la extensión de la plantilla: en un .html.twig, todo lo que se
+            // imprime con {{ }} sale escapado para HTML salvo que se pida lo contrario, que es la
+            // defensa principal contra el XSS (TP5, consigna 6). En un .txt.twig (los correos de
+            // texto plano) no se escapa: ahí un & tiene que llegar como &, y no como &amp;.
+            'autoescape' => 'name',
             'strict_variables' => $debug,
             'cache' => $cache,
             // Con caché, igual revisa si la plantilla cambió: publicar una versión nueva no
@@ -80,49 +81,19 @@ final class View
     }
 
     /**
-     * @param string               $template sin la extensión: «inicio» es views/inicio.html.twig
-     *                                       o, si todavía no se migró, views/inicio.view.php
+     * @param string               $template sin la extensión: «inicio» es views/inicio.html.twig,
+     *                                       y «correos/reserva-cliente», el .txt.twig
      * @param array<string, mixed> $data
      */
     public function render(string $template, array $data = []): string
     {
-        // Lo que pasa el controlador gana sobre lo compartido.
-        $data += $this->compartidos;
-
-        if (is_file("{$this->dir}/{$template}.html.twig")) {
-            return $this->twig->render("{$template}.html.twig", $data);
+        foreach (['html', 'txt'] as $tipo) {
+            if (is_file("{$this->dir}/{$template}.{$tipo}.twig")) {
+                // Lo que pasa el controlador gana sobre lo compartido.
+                return $this->twig->render("{$template}.{$tipo}.twig", $data + $this->compartidos);
+            }
         }
 
-        $file = "{$this->dir}/{$template}.view.php";
-        if (!is_file($file)) {
-            throw new LogicException("No existe la vista {$template}.");
-        }
-
-        return self::renderPhp($file, $data);
-    }
-
-    /**
-     * Las plantillas del TP3, hasta que se pasen todas a Twig.
-     *
-     * @param array<string, mixed> $data
-     */
-    private static function renderPhp(string $file, array $data): string
-    {
-        // En una función aparte, para que la plantilla sólo vea sus datos y no las variables de acá.
-        $include = static function (string $__file, array $__data): void {
-            extract($__data, EXTR_SKIP);
-            require $__file;
-        };
-
-        ob_start();
-        try {
-            $include($file, $data);
-
-            return (string) ob_get_clean();
-        } catch (Throwable $error) {
-            // Lo que alcanzó a imprimir no puede quedar pegado a la página de error.
-            ob_end_clean();
-            throw $error;
-        }
+        throw new LogicException("No existe la vista {$template}.");
     }
 }

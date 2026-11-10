@@ -256,7 +256,7 @@ pawprints/backend/
 ├── config/            config.example.ini, que se copia a config.ini
 ├── logs/              app.log
 ├── data/              los datos del TP3, en JSON
-├── views/             plantillas PHP, con encabezado y pie en layouts/
+├── views/             plantillas de Twig: la base, parciales, macros y correos/
 └── src/
     ├── App.php        el recorrido de cada pedido
     ├── Core/          lo transversal: no sabe nada de libros
@@ -310,8 +310,8 @@ ver el detalle de los errores mientras se trabaja, cambiarlo a `"desarrollo"`.
 [`Models/LibroRepository`](pawprints/backend/src/Models/LibroRepository.php) resuelve la búsqueda,
 los filtros y el orden sobre [`data/libros.json`](https://github.com/cerberus-paw/pawprints_tps/blob/TP3/pawprints/backend/data/libros.json), y
 [`Models/AutorRepository`](pawprints/backend/src/Models/AutorRepository.php) trae la reseña del
-autor para la ficha. Las vistas son [`catalogo`](pawprints/backend/views/catalogo.view.php) y
-[`libro`](pawprints/backend/views/libro.view.php).
+autor para la ficha. Las vistas son [`catalogo`](pawprints/backend/views/catalogo.html.twig) y
+[`libro`](pawprints/backend/views/libro.html.twig).
 
 **Qué se puede pedir.** Todo viaja en la query, así que cualquier vista del catálogo es un enlace
 que se puede compartir, y los formularios de la página conservan en campos ocultos lo que no
@@ -378,7 +378,7 @@ encontró nada, con un enlace para volver al catálogo completo.
 
 [`ReservaController`](pawprints/backend/src/Controllers/ReservaController.php) recibe el
 formulario; [`Models/Reserva`](pawprints/backend/src/Models/Reserva.php) lo valida, y sólo existe
-si es válida; las vistas [`reserva`](pawprints/backend/views/reserva.view.php) y
+si es válida; las vistas [`reserva`](pawprints/backend/views/reserva.html.twig) y
 [`correos/`](pawprints/backend/views/correos/) generan la página y el texto de cada correo.
 
 **Validaciones.** El navegador valida primero con los atributos del TP1 (por eso se sacó el
@@ -446,7 +446,7 @@ HTTP que corresponde:
 
 [`App::errorResponse()`](pawprints/backend/src/App.php) es el único lugar por donde salen: elige
 el estado, registra lo que haya que investigar y arma la página con la vista
-[`error`](pawprints/backend/views/error.view.php) y
+[`error`](pawprints/backend/views/error.html.twig) y
 [`css/error.css`](pawprints/frontend/css/error.css). Los mensajes de cada estado están en
 `App::MENSAJES`, y una [`HttpException`](pawprints/backend/src/Core/HttpException.php) puede traer
 el suyo, más preciso.
@@ -595,7 +595,7 @@ Todo el JavaScript es propio, sin librerías de terceros, y está en
   componentes y los inicializa sobre sus elementos.
 
 Cada controlador dice qué script necesita su página con `extraJs`, igual que hace con las hojas de
-estilo en `extraCss`, y el [layout](pawprints/backend/views/layouts/header.php) lo carga con
+estilo en `extraCss`, y la [plantilla base](pawprints/backend/views/base.html.twig) lo carga con
 `<script type="module">`. Por ejemplo, el inicio:
 
 ```php
@@ -627,7 +627,7 @@ No hay JavaScript dentro de las vistas: ni `<script>` con código ni atributos c
 > Solo recibirá como parámetro el contenedor de las imágenes y debe permitir trabajar dentro del contenedor y ocupando todo el viewport redimensionando las imágenes para tal fin.
 
 La librería es [`carrusel.js`](pawprints/frontend/js/componentes/carrusel.js), con sus estilos en
-[`carrusel.css`](pawprints/frontend/css/carrusel.css). En el [inicio](pawprints/backend/views/inicio.view.php)
+[`carrusel.css`](pawprints/frontend/css/carrusel.css). En el [inicio](pawprints/backend/views/inicio.html.twig)
 ocupa el recuadro «Imagen del lugar» del wireframe, con fotos de la librería.
 
 Se usa con `new Carrusel(contenedor)`, donde el contenedor tiene las `<img>`:
@@ -671,7 +671,7 @@ Se usa con `new Carrusel(contenedor)`, donde el contenedor tiene las `<img>`:
 
 El sitio no tenía formulario de libros nuevos, así que se creó: **`/libros/nuevo`**, enlazado desde
 el pie de página. Lo atienden [`LibroNuevoController`](pawprints/backend/src/Controllers/LibroNuevoController.php),
-la [vista](pawprints/backend/views/libro-nuevo.view.php) y el modelo
+la [vista](pawprints/backend/views/libro-nuevo.html.twig) y el modelo
 [`LibroNuevo`](pawprints/backend/src/Models/LibroNuevo.php). La validación en línea es el componente
 [`validador.js`](pawprints/frontend/js/componentes/validador.js), y [la página](pawprints/frontend/js/paginas/libro-nuevo.js)
 le agrega la regla del ISBN.
@@ -775,7 +775,7 @@ ficha de la respuesta la muestra.
 >
 > Nota: Prestar principal atención a los detalles de usabilidad en la versión Mobile.
 
-El [catálogo](pawprints/backend/views/catalogo.view.php) trae todos los libros una sola vez desde
+El [catálogo](pawprints/backend/views/catalogo.html.twig) trae todos los libros una sola vez desde
 **`/catalogo/json`** y, desde ahí, busca, filtra, ordena y pagina en el navegador, sin recargar la
 página. Lo hace el componente [`filtros-catalogo.js`](pawprints/frontend/js/componentes/filtros-catalogo.js),
 que inicializa [la página](pawprints/frontend/js/paginas/catalogo.js) con `new FiltrosCatalogo(main)`.
@@ -826,7 +826,7 @@ Cómo se comporta:
 El componente [`historial-busquedas.js`](pawprints/frontend/js/componentes/historial-busquedas.js),
 con sus estilos en [`componentes.css`](pawprints/frontend/css/componentes.css), se engancha a los dos
 buscadores del sitio: el del encabezado y el del catálogo. Como el del encabezado está en todas las
-páginas, el [layout](pawprints/backend/views/layouts/header.php) lo carga siempre.
+páginas, la [plantilla base](pawprints/backend/views/base.html.twig) lo carga siempre.
 
 - Al enviar una búsqueda, antes de que el navegador cambie de página, se guarda en Local Storage
   bajo la clave `pawprints.busquedas`, como un arreglo JSON.
