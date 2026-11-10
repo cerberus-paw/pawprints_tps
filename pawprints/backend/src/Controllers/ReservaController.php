@@ -109,7 +109,7 @@ class ReservaController extends Controller
      */
     protected function nuevoCatalogo(): CatalogoDeLibros
     {
-        return new LibroRepository();
+        return new LibroRepository($this->db);
     }
 
     private function catalogo(): CatalogoDeLibros

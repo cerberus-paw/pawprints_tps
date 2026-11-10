@@ -224,7 +224,7 @@ class CatalogoController extends Controller
     /** Protected, para que una prueba pueda darle un catálogo de mentira. */
     protected function libros(): LibroRepository
     {
-        return $this->libros ??= new LibroRepository();
+        return $this->libros ??= new LibroRepository($this->db);
     }
 
     protected function autores(): AutorRepository

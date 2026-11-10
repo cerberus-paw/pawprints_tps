@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace PawPrints\Models;
 
-use PawPrints\Core\JsonRepository;
+use PawPrints\Core\Database;
+use PDO;
 
 /**
- * El catálogo, guardado en data/libros.json. Resuelve la búsqueda, los filtros, el orden y el
- * paginado, y es la implementación de CatalogoDeLibros que usa la reserva del punto 5.
+ * El catálogo, guardado en la tabla libros de la base (TP5; hasta el TP4, en data/libros.json).
+ * Resuelve la búsqueda, los filtros, el orden y el paginado, y es la implementación de
+ * CatalogoDeLibros que usa la reserva del punto 5. Los métodos públicos y lo que devuelven son los
+ * mismos que con el JSON: el cambio de persistencia no toca ningún controlador ni vista.
  * Responsabilidad: Agustina (Punto 4).
  *
  * Los métodos devuelven el libro completo, que es un superconjunto de las cuatro claves que
@@ -16,11 +19,15 @@ use PawPrints\Core\JsonRepository;
  *
  * @phpstan-type Libro array{id: int, titulo: string, autor: string, genero: string, isbn: string,
  *               formato: string, precio: int, stock: int, resumen: string, descripcion: string,
- *               imagen: string}
+ *               imagen: string|null}
  */
-final class LibroRepository extends JsonRepository implements CatalogoDeLibros
+final class LibroRepository implements CatalogoDeLibros
 {
-    protected const FILE = 'libros.json';
+    /**
+     * Las columnas que forman un libro, las mismas claves que tenía cada objeto del JSON. Se
+     * nombran una por una y no con «*»: isbn_digitos y creado son de la base y no del libro.
+     */
+    private const COLUMNAS = 'id, titulo, autor, genero, isbn, formato, precio, stock, resumen, descripcion, imagen';
 
     /**
      * Cuántos libros por página se pueden pedir con `?por_pagina=…`. Es una lista cerrada y no un
@@ -34,15 +41,21 @@ final class LibroRepository extends JsonRepository implements CatalogoDeLibros
     /** Cuántos libros entran en una página del catálogo si no se pide otra cantidad. */
     public const POR_PAGINA = self::CANTIDADES[0];
 
+    public function __construct(private readonly Database $db)
+    {
+    }
+
     /**
-     * El catálogo entero, en el orden del archivo.
+     * El catálogo entero, en el orden en que se cargó: el del id, que es el que tenía el archivo.
+     * Los enteros (id, precio, stock) llegan como int porque las consultas son preparadas de verdad
+     * (ver Database).
      *
      * @return list<Libro>
      */
     public function todos(): array
     {
         /** @var list<Libro> */
-        return $this->rows();
+        return $this->pdo()->query('SELECT ' . self::COLUMNAS . ' FROM libros ORDER BY id')->fetchAll();
     }
 
     /**
@@ -50,31 +63,22 @@ final class LibroRepository extends JsonRepository implements CatalogoDeLibros
      */
     public function porId(int $id): ?array
     {
-        foreach ($this->todos() as $libro) {
-            if ($libro['id'] === $id) {
-                return $libro;
-            }
-        }
-
-        return null;
+        return $this->uno('SELECT ' . self::COLUMNAS . ' FROM libros WHERE id = ?', [$id]);
     }
 
     /**
      * El libro con ese ISBN, comparando sólo los números: «978-987-1234-56-1» y «9789871234561»
-     * son el mismo. Lo usa la carga de libros nuevos para no repetir uno que ya está.
+     * son el mismo. Lo usa la carga de libros nuevos para no repetir uno que ya está. Compara
+     * contra isbn_digitos, la columna que la base calcula y sobre la que está el índice único.
      *
      * @return Libro|null
      */
     public function porIsbn(string $isbn): ?array
     {
-        $buscado = preg_replace('/\D/', '', $isbn);
-        foreach ($this->todos() as $libro) {
-            if (preg_replace('/\D/', '', $libro['isbn']) === $buscado) {
-                return $libro;
-            }
-        }
-
-        return null;
+        return $this->uno(
+            'SELECT ' . self::COLUMNAS . ' FROM libros WHERE isbn_digitos = ?',
+            [preg_replace('/\D/', '', $isbn)],
+        );
     }
 
     /**
@@ -221,18 +225,40 @@ final class LibroRepository extends JsonRepository implements CatalogoDeLibros
     }
 
     /**
+     * @param 'genero'|'formato' $campo nunca lo que escribió el usuario: un nombre de columna no
+     *                                  se puede pasar como parámetro de una consulta preparada
+     *
      * @return array<string, int> valor => cuántos libros lo tienen, alfabético
      */
     private function contar(string $campo): array
     {
-        $cuenta = [];
-        foreach ($this->todos() as $libro) {
-            $valor = (string) $libro[$campo];
-            $cuenta[$valor] = ($cuenta[$valor] ?? 0) + 1;
-        }
-        ksort($cuenta);
+        $filas = $this->pdo()
+            ->query("SELECT {$campo}, COUNT(*) FROM libros GROUP BY {$campo} ORDER BY {$campo}")
+            ->fetchAll(PDO::FETCH_KEY_PAIR);
 
-        return $cuenta;
+        return array_map('intval', $filas);
+    }
+
+    /**
+     * El primer libro de una consulta, o null si no trajo ninguno.
+     *
+     * @param list<mixed> $parametros
+     *
+     * @return Libro|null
+     */
+    private function uno(string $sql, array $parametros): ?array
+    {
+        $consulta = $this->pdo()->prepare($sql);
+        $consulta->execute($parametros);
+        $libro = $consulta->fetch();
+
+        /** @var Libro|null */
+        return $libro === false ? null : $libro;
+    }
+
+    private function pdo(): PDO
+    {
+        return $this->db->pdo();
     }
 
     /**
