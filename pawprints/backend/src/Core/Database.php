@@ -47,7 +47,7 @@ final class Database
         $dsn = "mysql:host={$servidor};port={$puerto};dbname={$base};charset=utf8mb4";
 
         try {
-            return new PDO($dsn, $usuario, (string) $this->config->get('db.clave', ''), [
+            $pdo = new PDO($dsn, $usuario, (string) $this->config->get('db.clave', ''), [
                 // Un error de SQL es una excepción y no un false que alguien se olvida de mirar.
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -59,5 +59,13 @@ final class Database
         } catch (PDOException $error) {
             throw new RuntimeException("No se pudo conectar a la base {$base} en {$servidor}:{$puerto}.", 0, $error);
         }
+
+        // Las fechas que pone la base (la de una reserva, la del alta de un libro) en la hora del
+        // sitio, app.zona_horaria, y no en la del servidor de MySQL, que suele estar en UTC. Va
+        // como diferencia («-03:00») y no por nombre porque los nombres de zona necesitan tablas
+        // que MySQL no trae cargadas.
+        $pdo->prepare('SET time_zone = ?')->execute([date('P')]);
+
+        return $pdo;
     }
 }
