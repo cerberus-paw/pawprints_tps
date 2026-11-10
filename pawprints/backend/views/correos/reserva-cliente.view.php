@@ -6,6 +6,7 @@
  * así el correo no sirve para mandarle un texto propio a un tercero.
  *
  * @var PawPrints\Models\Reserva $reserva
+ * @var int                      $numero  el de la reserva guardada
  */
 $libro = $reserva->libro;
 $ejemplares = $reserva->cantidad === 1 ? 'un ejemplar' : "{$reserva->cantidad} ejemplares";
@@ -14,6 +15,7 @@ echo <<<TXT
     Hola, {$reserva->nombre}:
 
     Recibimos tu reserva de {$ejemplares} de «{$libro['titulo']}», de {$libro['autor']}.
+    Es la número {$numero}: si nos escribís por ella, mencionala.
 
     La reserva queda guardada por 10 días hábiles, y se paga al retirarla en la tienda:
     Instituto Uzue, Mercedes, Buenos Aires. Lunes a sábados de 9 a 20 h.

@@ -6,6 +6,7 @@
  * sigue a cada etiqueta de cierre, y en un texto plano eso pega las líneas.
  *
  * @var PawPrints\Models\Reserva $reserva
+ * @var int                      $numero  el de la reserva guardada
  */
 $precio = static fn (int $pesos): string => '$' . number_format($pesos, 0, ',', '.');
 
@@ -15,7 +16,7 @@ $total = $precio($reserva->total());
 $comentarios = $reserva->comentarios !== '' ? $reserva->comentarios : '(sin comentarios)';
 
 echo <<<TXT
-    Llegó una reserva desde el sitio.
+    Llegó la reserva #{$numero} desde el sitio.
 
     Libro:     {$libro['titulo']} — {$libro['autor']} (id {$libro['id']})
     Cantidad:  {$reserva->cantidad}
