@@ -1092,6 +1092,27 @@ Hay tres tipos, según de dónde sale el script:
   `@` ([`Csv`](pawprints/backend/src/Core/Csv.php)): es el mismo problema en otro contexto, una
   planilla que tomaría un título como fórmula.
 
+#### Pruebas
+
+Se probaron en Chrome, con el sitio y la base MySQL locales. Para saber si algo se ejecutaba, la
+prueba registraba cualquier `alert()` y cualquier violación de la CSP: no hubo ninguno de los dos.
+En todos los casos la carga se ve escrita, tal cual.
+
+| Tipo | Dónde | Entrada | Qué pasó |
+| --- | --- | --- | --- |
+| Reflejado | Buscador del catálogo | `/catalogo?q="><script>alert(1)</script>` | Aparece escrito en el campo de búsqueda |
+| Reflejado | Reserva con errores | Nombre `"><script>alert(8)</script>` y un correo inválido | Vuelve escrito en el campo, con el error del correo |
+| Reflejado | Ingreso del personal | Usuario `"><script>alert(10)</script>` | Vuelve escrito en el campo |
+| Reflejado | Ingreso del personal | `?volver=javascript:alert(9)` | Después de ingresar va a los pedidos, no a esa dirección |
+| Almacenado | Listado de pedidos | Una reserva con el nombre `<img src=x onerror=alert(4)>` y los comentarios `<script>alert(5)</script>` y `"><svg onload=alert(6)>` | Se leen como texto en la tabla; no hay ningún `img`, `script` ni `svg` dentro |
+| Almacenado | Carga de libros | Título `<svg onload=alert(11)>Libro XSS` y autor `"><script>alert(12)</script>` | Se ven escritos en la confirmación, en la ficha, en la tarjeta que arma el servidor y en la que arma el JS del catálogo |
+| Almacenado | CSV del catálogo | Títulos que empiezan con `=HYPERLINK(…)`, `+`, `-` o `@` | Salen con un apóstrofo adelante: la planilla los muestra como texto |
+| DOM | Búsquedas recientes | Buscar `<img src=x onerror=alert(2)>` y volver a abrir el historial | Aparece escrito en la lista, sin ningún `img` |
+| DOM | Catálogo filtrado en el navegador | Escribir `<img src=x onerror=alert(3)>` en el buscador | «Mostrando 0 libros» |
+| DOM | Zona de arrastre | Una tapa llamada `<img src=x onerror=alert(7)>.jpg` | El nombre del archivo se ve escrito en la vista previa |
+| Sesión | Consola, con la sesión del personal iniciada | `document.cookie` | Vacío: la cookie es `HttpOnly` |
+| CSP | Catálogo, desde la consola | Agregar un `<script>` y un `<img onerror>` a la página | No se ejecutan: la CSP los bloquea (sin la cabecera, los dos se ejecutan) |
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
