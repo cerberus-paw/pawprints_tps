@@ -23,6 +23,11 @@ final class HttpException extends RuntimeException
         parent::__construct($message, $status);
     }
 
+    public static function badRequest(string $message): self
+    {
+        return new self(400, $message);
+    }
+
     public static function notFound(string $message = 'Página no encontrada.'): self
     {
         return new self(404, $message);

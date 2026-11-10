@@ -1,0 +1,45 @@
+{#
+  Ingreso del personal (TP5, consigna 3). Variables:
+    usuario — lo que escribió, para no hacérselo escribir de nuevo si se equivocó
+    error   — «Usuario o contraseña incorrectos.», o null
+    csrf    — el token de la sesión, que vuelve con el formulario
+#}
+{% extends 'base.html.twig' %}
+
+{% block contenido %}
+  <main>
+
+    <section aria-labelledby="titulo-ingreso">
+      <h1 id="titulo-ingreso">Ingreso del personal</h1>
+      <p>Para ver los pedidos y cargar libros nuevos.</p>
+
+      {% if error %}
+        {# role="alert": el lector de pantalla lo anuncia apenas carga la página. #}
+        <p role="alert" id="error-ingreso">{{ error }}</p>
+      {% endif %}
+
+      <form action="/personal/ingresar" method="post">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+
+        <div>
+          <label for="usuario">Usuario</label>
+          <input type="text" id="usuario" name="usuario" value="{{ usuario }}" required maxlength="50"
+                 autocomplete="username" autocapitalize="none" spellcheck="false"
+                 {%- if error %} aria-invalid="true" aria-describedby="error-ingreso"{% endif %}
+                 {%- if not usuario %} autofocus{% endif %}>
+        </div>
+
+        <div>
+          <label for="clave">Contraseña</label>
+          {# Nunca vuelve con valor: la contraseña no se escribe en el HTML. #}
+          <input type="password" id="clave" name="clave" required autocomplete="current-password"
+                 {%- if error %} aria-invalid="true" aria-describedby="error-ingreso"{% endif %}
+                 {%- if usuario %} autofocus{% endif %}>
+        </div>
+
+        <button type="submit">Ingresar</button>
+      </form>
+    </section>
+
+  </main>
+{% endblock %}

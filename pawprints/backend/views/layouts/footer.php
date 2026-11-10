@@ -34,7 +34,7 @@
         <li><a href="/">Inicio</a></li>
         <li><a href="/catalogo">Catálogo completo</a></li>
         <li><a href="/sobre-nosotros">Sobre Nosotros</a></li>
-        <li><a href="/libros/nuevo">Cargar un libro (personal)</a></li>
+        <li><a href="/personal/ingresar">Ingreso del personal</a></li>
       </ul>
     </nav>
 

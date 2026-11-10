@@ -5,6 +5,7 @@ declare(strict_types=1);
 use PawPrints\Controllers\CatalogoController;
 use PawPrints\Controllers\HomeController;
 use PawPrints\Controllers\LibroNuevoController;
+use PawPrints\Controllers\PersonalController;
 use PawPrints\Controllers\ReservaController;
 use PawPrints\Controllers\SobreNosotrosController;
 use PawPrints\Core\Router;
@@ -35,4 +36,10 @@ return static function (Router $router): void {
     $router->get('/reserva', [ReservaController::class, 'formulario']);
     $router->post('/reserva', [ReservaController::class, 'enviar']);
     $router->get('/reserva/confirmacion', [ReservaController::class, 'confirmacion']);
+
+    // El personal (TP5): ingresa con su usuario para ver los pedidos y cargar libros. Salir es un
+    // POST, como cualquier acción que cambia algo.
+    $router->get('/personal/ingresar', [PersonalController::class, 'formulario']);
+    $router->post('/personal/ingresar', [PersonalController::class, 'ingresar']);
+    $router->post('/personal/salir', [PersonalController::class, 'salir']);
 };

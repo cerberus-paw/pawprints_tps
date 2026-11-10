@@ -1,0 +1,96 @@
+/* ================================================================
+   PAWPrints — Librería
+   personal.css: Estilos de las páginas del personal (TP5)
+   ================================================================ */
+
+/* Mismo fondo cálido y la misma tarjeta blanca que la reserva, para que
+   el formulario del personal se lea como parte del sitio. */
+.page-personal {
+  background: var(--cream);
+}
+
+.page-personal main {
+  max-width: calc(28rem + 2 * var(--gutter));
+  margin-inline: auto;
+  padding: var(--sp-16) var(--gutter);
+}
+
+.page-personal main > section {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  padding: var(--sp-10);
+}
+
+.page-personal main h1 {
+  font-family: var(--font-serif);
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  margin-bottom: var(--sp-3);
+}
+
+.page-personal main h1 + p {
+  color: var(--muted);
+  margin-bottom: var(--sp-6);
+}
+
+.page-personal main [role="alert"] {
+  color: #C0392B;
+  background: #FDECEA;
+  border-radius: var(--r-md);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-5);
+}
+
+.page-personal main form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.page-personal main form > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.page-personal main form label {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.page-personal main form input {
+  width: 100%;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.7rem var(--sp-4);
+}
+
+.page-personal main form input:focus-visible {
+  outline: 3px solid var(--v500);
+  outline-offset: 2px;
+}
+
+.page-personal main form [aria-invalid="true"] {
+  border-color: #C0392B;
+}
+
+.page-personal main form button {
+  background: var(--v700);
+  color: var(--white);
+  align-self: flex-start;
+}
+
+.page-personal main form button:hover {
+  background: var(--v600);
+}
+
+@media (max-width: 480px) {
+  .page-personal main > section {
+    padding: var(--sp-6);
+  }
+}

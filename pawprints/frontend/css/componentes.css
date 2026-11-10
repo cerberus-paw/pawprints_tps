@@ -94,6 +94,29 @@ body > header nav a[aria-current="page"]::after {
   line-height: 1;
 }
 
+/* «Salir» del personal (TP5): es un botón, porque cerrar la sesión es un
+   POST, pero se ve como un enlace más del menú. */
+body > header nav form {
+  display: contents;
+}
+
+body > header nav form button {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--dark);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 0 0 3px;
+  letter-spacing: normal;
+}
+
+body > header nav form button:hover {
+  color: var(--v700);
+}
+
 /* Módulo de Búsqueda */
 body > header search {
   display: flex;

@@ -16,6 +16,7 @@ use PawPrints\Core\Mailer;
 use PawPrints\Core\Request;
 use PawPrints\Core\Response;
 use PawPrints\Core\Router;
+use PawPrints\Core\Sesion;
 use PawPrints\Core\SmtpMailer;
 use PawPrints\Core\View;
 use RuntimeException;
@@ -48,6 +49,7 @@ final class App
         private readonly Logger $logger,
         private readonly Mailer $mailer,
         private readonly Database $db,
+        private readonly Sesion $sesion,
     ) {
     }
 
@@ -104,6 +106,7 @@ final class App
             self::mailer($config, $backendDir),
             // No conecta todavía: lo hace el primer repositorio que la use.
             new Database($config),
+            Sesion::desdeElServidor(),
         );
     }
 
@@ -146,6 +149,8 @@ final class App
         // error, y si no, se decide abajo qué hacer con eso según el entorno.
         ob_start();
         try {
+            // El menú de todas las páginas cambia si ingresó alguien del personal.
+            $this->compartirPersonal();
             [$action, $params] = $this->router->resolve($request->method(), $request->path());
             $response = $this->dispatch($action, $request->withRouteParams($params));
             $suelto = (string) ob_get_clean();
@@ -176,12 +181,25 @@ final class App
     }
 
     /**
+     * Quién del personal ingresó, con el token del botón «Salir», para el menú de todas las
+     * vistas. null si no ingresó nadie: el menú queda como lo ve un cliente.
+     */
+    private function compartirPersonal(): void
+    {
+        $personal = $this->sesion->personal();
+        $this->view->compartir('personal', $personal === null ? null : [
+            'nombre' => $personal['nombre'],
+            'csrf' => $this->sesion->csrf(),
+        ]);
+    }
+
+    /**
      * @param array{0: class-string<Controller>, 1: string} $action
      */
     private function dispatch(array $action, Request $request): Response
     {
         [$class, $method] = $action;
-        $response = (new $class($this->view, $this->config, $this->logger, $this->mailer, $this->db))->$method($request);
+        $response = (new $class($this->view, $this->config, $this->logger, $this->mailer, $this->db, $this->sesion))->$method($request);
         if (!$response instanceof Response) {
             throw new LogicException("{$class}::{$method} tiene que devolver una Response.");
         }
