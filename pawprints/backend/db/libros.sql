@@ -1,4 +1,4 @@
--- Los 30 libros del catálogo, los mismos de data/libros.json, con sus id: así las direcciones
+-- Los 30 libros del catálogo, los mismos del JSON del TP4, con sus id: así las direcciones
 -- /libros/{id} del TP4 siguen llevando al mismo libro.
 --
 -- Va después de esquema.sql y también se puede volver a correr: un libro que ya está no se pisa

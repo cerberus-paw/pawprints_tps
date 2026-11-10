@@ -29,15 +29,19 @@ Las cinco maquetas del TP2: [inicio](pawprints/frontend/index.html) · [catálog
 
 ## Cómo levantar el sitio
 
-Requisitos: **PHP 8.3 o superior** (con el servidor web incorporado y la extensión `openssl`, que
-trae cualquier instalación común), **[Composer](https://getcomposer.org/) 2** y **Git**. Composer
-instala Twig y el autoload de las clases; los libros están en
-[`data/libros.json`](pawprints/backend/data/libros.json).
+Requisitos: **PHP 8.3 o superior** (con el servidor web incorporado y las extensiones `openssl` y
+`pdo_mysql`), **MySQL 8.4**, **[Composer](https://getcomposer.org/) 2** y **Git**. Composer
+instala Twig y el autoload de las clases. Los libros están en la base: los cargan
+[`db/esquema.sql`](pawprints/backend/db/esquema.sql), que crea la base, su usuario y las tablas,
+y [`db/libros.sql`](pawprints/backend/db/libros.sql). Los dos se corren como root y se pueden
+volver a correr sin perder datos.
 
 ```bash
 git clone https://github.com/cerberus-paw/pawprints_tps.git
 cd pawprints_tps
 composer install --working-dir=pawprints/backend
+mysql -u root -p < pawprints/backend/db/esquema.sql
+mysql -u root -p < pawprints/backend/db/libros.sql
 cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
 php -S localhost:8080 -t pawprints/frontend
 ```
@@ -48,6 +52,7 @@ El único archivo de configuración es `pawprints/backend/config/config.ini` (el
 
 | Clave | Para qué | Valor para trabajar en una máquina propia |
 | --- | --- | --- |
+| `db.*` | Servidor, puerto, base, usuario y clave de MySQL | Los del ejemplo, que son los que crea `esquema.sql` |
 | `app.entorno` | Cuánto detalle de un error ve el cliente | El ejemplo trae `"produccion"`. Con `"desarrollo"` la página de error agrega el detalle |
 | `correo.transporte` | Qué se hace con cada correo | `"archivo"`, que viene por defecto: los guarda como `.eml` en `pawprints/backend/logs/correos/` en lugar de mandarlos |
 | `correo.reservas` | A quién le llega el aviso de cada reserva | Cualquier dirección |
@@ -269,7 +274,7 @@ en el log.
 | Mapeo de URLs | [`Core/Router`](pawprints/backend/src/Core/Router.php) y [`routes.php`](pawprints/backend/routes.php) | Método + ruta → controlador, con parámetros en la ruta (`/libros/{id}`). 404 si la ruta no existe y 405 con `Allow` si existe con otro método |
 | Generación de las respuestas HTTP | [`Core/Response`](pawprints/backend/src/Core/Response.php) | Estado, cabeceras y cuerpo: HTML, texto, redirección o descarga. El controlador la devuelve en lugar de hacer `echo` y `header()` |
 | Generación de registros | [`Core/Logger`](pawprints/backend/src/Core/Logger.php) | `logs/app.log` con los niveles y métodos de PSR-3: una línea por pedido y el detalle de cada error |
-| Persistencia | [`Core/JsonRepository`](pawprints/backend/src/Core/JsonRepository.php) y [`Models/`](pawprints/backend/src/Models/) | Cada repositorio lee su archivo de `data/`. En el TP5 pasa a PDO detrás de los mismos métodos |
+| Persistencia | [`Core/JsonRepository`](https://github.com/cerberus-paw/pawprints_tps/blob/TP3/pawprints/backend/src/Core/JsonRepository.php) y [`Models/`](pawprints/backend/src/Models/) | Cada repositorio lee su archivo de `data/`. En el TP5 pasa a PDO detrás de los mismos métodos |
 | Configuración | [`Core/Config`](pawprints/backend/src/Core/Config.php) y [`config.example.ini`](pawprints/backend/config/config.example.ini) | Entorno, zona horaria, log y correo de las reservas, en un `.ini` que no se versiona |
 | Representaciones de la información | [`Core/View`](pawprints/backend/src/Core/View.php) con [`views/`](pawprints/backend/views/), y [`Core/Csv`](pawprints/backend/src/Core/Csv.php) | HTML con plantillas PHP (Template View) y CSV para el catálogo. Un PDF o un XML serían otra clase al lado: el controlador elige la representación |
 
@@ -303,7 +308,7 @@ ver el detalle de los errores mientras se trabaja, cambiarlo a `"desarrollo"`.
 
 [`CatalogoController`](pawprints/backend/src/Controllers/CatalogoController.php) atiende las tres.
 [`Models/LibroRepository`](pawprints/backend/src/Models/LibroRepository.php) resuelve la búsqueda,
-los filtros y el orden sobre [`data/libros.json`](pawprints/backend/data/libros.json), y
+los filtros y el orden sobre [`data/libros.json`](https://github.com/cerberus-paw/pawprints_tps/blob/TP3/pawprints/backend/data/libros.json), y
 [`Models/AutorRepository`](pawprints/backend/src/Models/AutorRepository.php) trae la reseña del
 autor para la ficha. Las vistas son [`catalogo`](pawprints/backend/views/catalogo.view.php) y
 [`libro`](pawprints/backend/views/libro.view.php).
@@ -711,7 +716,7 @@ Cómo se comporta:
 - **Al apretar «Cargar libro» no se valida el campo que pierde el foco.** Si su mensaje apareciera en
   ese momento, correría el botón hacia abajo y el clic se perdería. El envío lo valida igual, junto
   con todos los demás.
-- **Todavía no se guarda.** El catálogo es [`libros.json`](pawprints/backend/data/libros.json), que
+- **Todavía no se guarda.** El catálogo es [`libros.json`](https://github.com/cerberus-paw/pawprints_tps/blob/tp4/pawprints/backend/data/libros.json), que
   está versionado: agregarle libros desde el sitio modificaría el repositorio en cada prueba. Se
   guarda cuando el TP5 traiga la base de datos. Por eso la respuesta es directa y no redirige a
   otra página: reenviarla no duplica nada.
@@ -775,7 +780,7 @@ El [catálogo](pawprints/backend/views/catalogo.view.php) trae todos los libros 
 página. Lo hace el componente [`filtros-catalogo.js`](pawprints/frontend/js/componentes/filtros-catalogo.js),
 que inicializa [la página](pawprints/frontend/js/paginas/catalogo.js) con `new FiltrosCatalogo(main)`.
 La ruta la atiende [`CatalogoController`](pawprints/backend/src/Controllers/CatalogoController.php)
-con `Response::json()`, y [`libros.json`](pawprints/backend/data/libros.json) pasó de 6 a 30 libros
+con `Response::json()`, y [`libros.json`](https://github.com/cerberus-paw/pawprints_tps/blob/tp4/pawprints/backend/data/libros.json) pasó de 6 a 30 libros
 para que el paginado y los filtros se vean.
 
 | Pide el enunciado | Cómo se resolvió |

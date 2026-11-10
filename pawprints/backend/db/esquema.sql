@@ -29,7 +29,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON pawprints.* TO 'pawprints'@'127.0.0.1';
 
 USE pawprints;
 
--- El catálogo. Tiene los mismos campos que libros.json. El género, el formato y el autor quedan
+-- El catálogo. Tiene los mismos campos que el JSON del TP4. El género, el formato y el autor quedan
 -- como texto en el libro: ninguna consigna los trata como entidades propias y no tienen más datos
 -- que el nombre.
 CREATE TABLE IF NOT EXISTS libros (
