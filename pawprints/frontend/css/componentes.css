@@ -538,3 +538,55 @@ search .historial-busquedas button.historial-busquedas-borrar:hover,
     max-width: 100%;
   }
 }
+
+/* ----------------------------------------------------------------
+   PAGINADO — el de un listado: el catálogo y los pedidos del personal.
+   Barra centrada debajo del listado.
+   ---------------------------------------------------------------- */
+nav.paginado {
+  margin-top: var(--sp-8); /* Separación de la grilla de resultados */
+}
+
+nav.paginado ul {
+  display: flex;
+  flex-wrap: wrap;                 /* En pantallas chicas baja de fila */
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-2);
+  list-style: none;                /* Es una barra de controles, no una lista de lectura */
+}
+
+/* Cada número y cada flecha, como botón */
+nav.paginado a {
+  display: inline-block;
+  min-width: 2.5rem;                                   /* Todos del mismo ancho, aunque tengan 1 dígito */
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border-v);
+  border-radius: var(--r-md);
+  background: var(--white);
+  color: var(--v700);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+  transition: background var(--ease), color var(--ease), border-color var(--ease);
+}
+
+nav.paginado a:hover {
+  background: var(--v50);
+  border-color: var(--v700);
+}
+
+/* La página actual: el mismo criterio que el menú principal, que se cuelga de aria-current */
+nav.paginado a[aria-current="page"] {
+  background: var(--v700);
+  border-color: var(--v700);
+  color: var(--white);
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  nav.paginado a {
+    min-width: 2.25rem;
+    padding: var(--sp-2);
+  }
+}

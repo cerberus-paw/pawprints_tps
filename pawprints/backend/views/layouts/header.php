@@ -5,7 +5,7 @@
  *
  * @var string $title
  * @var string $description
- * @var string $activePage ('inicio' | 'catalogo' | 'sobre-nosotros')
+ * @var string $activePage ('inicio' | 'catalogo' | 'sobre-nosotros', y del personal 'pedidos' | 'libro-nuevo')
  * @var string $pageClass
  * @var array $extraCss
  * @var array $extraJs   módulos de frontend/js/ que necesita la página, por ejemplo 'paginas/inicio.js'
@@ -59,7 +59,8 @@ $assetPath = '/';
         <li><a href="/catalogo"<?= $activePage === 'catalogo' ? ' aria-current="page"' : '' ?>>Catálogo</a></li>
         <li><a href="/sobre-nosotros"<?= $activePage === 'sobre-nosotros' ? ' aria-current="page"' : '' ?>>Sobre Nosotros</a></li>
 <?php if (($personal ?? null) !== null): /* Lo mismo que partials/menu.html.twig. A la izquierda, para no sumar espacios al HTML de siempre. */ ?>
-        <li><a href="/libros/nuevo">Cargar libro</a></li>
+        <li><a href="/personal/pedidos"<?= $activePage === 'pedidos' ? ' aria-current="page"' : '' ?>>Pedidos</a></li>
+        <li><a href="/libros/nuevo"<?= $activePage === 'libro-nuevo' ? ' aria-current="page"' : '' ?>>Cargar libro</a></li>
         <li>
           <form action="/personal/salir" method="post">
             <input type="hidden" name="csrf" value="<?= htmlspecialchars($personal['csrf']) ?>">

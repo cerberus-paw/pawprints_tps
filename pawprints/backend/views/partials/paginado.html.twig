@@ -1,0 +1,30 @@
+{#
+  El paginado de un listado: «Anterior», un número por página y «Siguiente». Es el mismo del
+  catálogo, para usar en cualquier listado. Variables:
+    etiqueta — el aria-label del <nav>, que lo distingue de los otros menús de la página
+    ruta     — la dirección del listado, como '/personal/pedidos'
+    query    — lo demás que va en la query (búsqueda, filtros…), que se conserva al cambiar de página
+    pagina, paginas — la actual, desde 1, y cuántas hay
+  La página 1 va sin «pagina=»: es la misma dirección que el listado sin paginar.
+#}
+{% set query = query ?? {} %}
+{% macro enlace(ruta, query, n) %}
+  {%- set q = n > 1 ? query|merge({pagina: n}) : query -%}
+  {{- ruta }}{% if q is not empty %}?{{ q|url_encode }}{% endif -%}
+{% endmacro %}
+{% if paginas > 1 %}
+  <nav class="paginado" aria-label="{{ etiqueta }}">
+    <ul>
+      {% if pagina > 1 %}
+        <li><a href="{{ _self.enlace(ruta, query, pagina - 1) }}" rel="prev">&larr; Anterior</a></li>
+      {% endif %}
+      {% for n in 1..paginas %}
+        {# aria-current marca la página actual, igual que el menú marca la sección. #}
+        <li><a href="{{ _self.enlace(ruta, query, n) }}"{% if n == pagina %} aria-current="page"{% endif %}>{{ n }}</a></li>
+      {% endfor %}
+      {% if pagina < paginas %}
+        <li><a href="{{ _self.enlace(ruta, query, pagina + 1) }}" rel="next">Siguiente &rarr;</a></li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endif %}

@@ -42,4 +42,5 @@ return static function (Router $router): void {
     $router->get('/personal/ingresar', [PersonalController::class, 'formulario']);
     $router->post('/personal/ingresar', [PersonalController::class, 'ingresar']);
     $router->post('/personal/salir', [PersonalController::class, 'salir']);
+    $router->get('/personal/pedidos', [PersonalController::class, 'pedidos']);
 };

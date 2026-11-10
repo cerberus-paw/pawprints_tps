@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PawPrints\Models;
 
 use PawPrints\Core\Database;
+use PDO;
 
 /**
  * Las reservas hechas desde el sitio, en la tabla reservas (TP5, consigna 2). Hasta el TP4 sólo
@@ -38,6 +39,37 @@ final class ReservaRepository
         ]);
 
         return (int) $pdo->lastInsertId();
+    }
+
+    /**
+     * Una página del listado del personal, de la más nueva a la más vieja, con el título y el
+     * autor del libro de cada una.
+     *
+     * @return list<array{id: int, creada: string, cantidad: int, nombre: string, correo: string,
+     *                    telefono: string, comentarios: string, aviso_enviado: int,
+     *                    libro_id: int, titulo: string, autor: string}>
+     */
+    public function listar(int $pagina, int $porPagina): array
+    {
+        $consulta = $this->db->pdo()->prepare(
+            'SELECT r.id, r.creada, r.cantidad, r.nombre, r.correo, r.telefono, r.comentarios,'
+            . ' r.aviso_enviado, r.libro_id, l.titulo, l.autor'
+            . ' FROM reservas r JOIN libros l ON l.id = r.libro_id'
+            // El id desempata las que llegaron en el mismo segundo.
+            . ' ORDER BY r.creada DESC, r.id DESC LIMIT :limite OFFSET :desde',
+        );
+        // Enteros: con las preparadas de verdad, MySQL no acepta un texto en el LIMIT.
+        $consulta->bindValue('limite', max(1, $porPagina), PDO::PARAM_INT);
+        $consulta->bindValue('desde', max(0, ($pagina - 1) * $porPagina), PDO::PARAM_INT);
+        $consulta->execute();
+
+        /** @var list<array{id: int, creada: string, cantidad: int, nombre: string, correo: string, telefono: string, comentarios: string, aviso_enviado: int, libro_id: int, titulo: string, autor: string}> */
+        return $consulta->fetchAll();
+    }
+
+    public function contar(): int
+    {
+        return (int) $this->db->pdo()->query('SELECT COUNT(*) FROM reservas')->fetchColumn();
     }
 
     /** Marca que el aviso de esa reserva le llegó al personal. */

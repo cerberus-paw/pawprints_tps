@@ -5,18 +5,23 @@ declare(strict_types=1);
 namespace PawPrints\Controllers;
 
 use PawPrints\Core\Controller;
+use PawPrints\Core\HttpException;
 use PawPrints\Core\Request;
 use PawPrints\Core\Response;
 use PawPrints\Models\PersonalRepository;
+use PawPrints\Models\ReservaRepository;
 
 /**
- * El ingreso y la salida del personal (TP5, consigna 3). No hay registro: los usuarios se crean
- * con bin/crear-personal.php.
+ * El ingreso y la salida del personal, y el listado de los pedidos (TP5, consigna 3). No hay
+ * registro: los usuarios se crean con bin/crear-personal.php.
  */
 class PersonalController extends Controller
 {
     /** Adónde va quien ingresa, si no venía de otra página del personal. */
-    private const INICIO = '/libros/nuevo';
+    private const INICIO = '/personal/pedidos';
+
+    /** Cuántas reservas entran en una página del listado. */
+    private const PEDIDOS_POR_PAGINA = 20;
 
     /**
      * El hash de una contraseña al azar que nadie conoce, para que el ingreso con un usuario que no
@@ -89,6 +94,41 @@ class PersonalController extends Controller
         $this->sesion->salir();
 
         return Response::redirect('/', 303);
+    }
+
+    /**
+     * GET /personal/pedidos, con ?pagina=2… — las reservas que llegaron desde el sitio, de la más
+     * nueva a la más vieja. «Pedidos» son las reservas: es lo único que el sitio recibe de los
+     * clientes.
+     */
+    public function pedidos(Request $request): Response
+    {
+        $this->exigirPersonal($request);
+
+        $reservas = new ReservaRepository($this->db);
+        $total = $reservas->contar();
+        $paginas = max(1, (int) ceil($total / self::PEDIDOS_POR_PAGINA));
+        $pagina = filter_var(
+            (string) $request->query('pagina', '1'),
+            FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1]],
+        );
+        // Como en el catálogo: una página que no existe es un 404, no un listado vacío.
+        if ($pagina === false || $pagina > $paginas) {
+            throw HttpException::notFound('No hay esa página de pedidos.');
+        }
+
+        return $this->render('personal/pedidos', [
+            'title' => 'Pedidos — PAWPrints',
+            'description' => 'Las reservas hechas desde el sitio, para el personal de la librería.',
+            'activePage' => 'pedidos',
+            'pageClass' => 'page-personal page-pedidos',
+            'extraCss' => ['personal.css'],
+            'pedidos' => $reservas->listar($pagina, self::PEDIDOS_POR_PAGINA),
+            'total' => $total,
+            'pagina' => $pagina,
+            'paginas' => $paginas,
+        ]);
     }
 
     /**

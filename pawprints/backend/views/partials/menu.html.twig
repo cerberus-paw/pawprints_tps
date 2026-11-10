@@ -16,7 +16,8 @@
         {% if personal %}
           {# Sólo con la sesión del personal iniciada. Salir es un formulario con el token CSRF y
              no un enlace: un GET lo podría disparar cualquier página. #}
-          <li><a href="/libros/nuevo">Cargar libro</a></li>
+          <li><a href="/personal/pedidos"{% if activePage == 'pedidos' %} aria-current="page"{% endif %}>Pedidos</a></li>
+          <li><a href="/libros/nuevo"{% if activePage == 'libro-nuevo' %} aria-current="page"{% endif %}>Cargar libro</a></li>
           <li>
             <form action="/personal/salir" method="post">
               <input type="hidden" name="csrf" value="{{ personal.csrf }}">
