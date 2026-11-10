@@ -7,6 +7,7 @@ namespace PawPrints;
 use LogicException;
 use PawPrints\Core\Config;
 use PawPrints\Core\Controller;
+use PawPrints\Core\Database;
 use PawPrints\Core\ErrorHandler;
 use PawPrints\Core\FileMailer;
 use PawPrints\Core\HttpException;
@@ -46,6 +47,7 @@ final class App
         private readonly Config $config,
         private readonly Logger $logger,
         private readonly Mailer $mailer,
+        private readonly Database $db,
     ) {
     }
 
@@ -94,6 +96,8 @@ final class App
             $config,
             $logger,
             self::mailer($config, $backendDir),
+            // No conecta todavía: lo hace el primer repositorio que la use.
+            new Database($config),
         );
     }
 
@@ -171,7 +175,7 @@ final class App
     private function dispatch(array $action, Request $request): Response
     {
         [$class, $method] = $action;
-        $response = (new $class($this->view, $this->config, $this->logger, $this->mailer))->$method($request);
+        $response = (new $class($this->view, $this->config, $this->logger, $this->mailer, $this->db))->$method($request);
         if (!$response instanceof Response) {
             throw new LogicException("{$class}::{$method} tiene que devolver una Response.");
         }
