@@ -144,9 +144,12 @@ class CatalogoController extends Controller
     }
 
     /**
-     * GET /catalogo/json — el catálogo entero, en el orden del archivo, para que el JS del
-     * catálogo lo traiga una sola vez y busque, filtre, ordene y pagine en el navegador. Lleva
-     * sólo los campos que usan las tarjetas y la búsqueda: el stock y la descripción larga no.
+     * GET /catalogo/json — el catálogo en el orden en que se cargó, para que el JS del catálogo lo
+     * traiga una sola vez y busque, filtre, ordene y pagine en el navegador. Lleva sólo los campos
+     * que usan las tarjetas y la búsqueda: el stock y la descripción larga no.
+     *
+     * Respeta los mismos filtros de la query que el listado y el CSV, sin paginar. El JS lo pide
+     * sin ninguno, así que recibe el catálogo entero, como hasta el TP4.
      */
     public function json(Request $request): Response
     {
@@ -162,7 +165,7 @@ class CatalogoController extends Controller
                 'resumen' => $libro['resumen'],
                 'imagen' => $libro['imagen'],
             ],
-            $this->libros()->todos(),
+            $this->libros()->buscar($this->filtros($request)),
         );
 
         return Response::json($libros);
