@@ -92,7 +92,13 @@ final class App
 
         return new self(
             $router,
-            new View($backendDir . '/views'),
+            // La caché de las plantillas compiladas, sólo en producción: en desarrollo, un cambio
+            // en una plantilla se ve al recargar sin borrar nada.
+            new View(
+                $backendDir . '/views',
+                $config->inProduction() ? $backendDir . '/cache/twig' : false,
+                debug: !$config->inProduction(),
+            ),
             $config,
             $logger,
             self::mailer($config, $backendDir),
