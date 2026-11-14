@@ -197,6 +197,18 @@ final class LibroNuevo
     }
 
     /**
+     * El mismo libro con una tapa, para el que se cargó sin una y la consiguió de Open Library
+     * (TP5, consigna 7). El resto ya pasó la validación, y la tapa la validó OpenLibrary::tapa().
+     */
+    public function conImagen(string $imagen): self
+    {
+        return new self(
+            $this->titulo, $this->autor, $this->genero, $this->formato, $this->isbn,
+            $this->precio, $this->stock, $this->resumen, $this->descripcion, $imagen,
+        );
+    }
+
+    /**
      * Valida el archivo de tapa subido ($_FILES['tapa']).
      * Controla UPLOAD_ERR_OK, el tamaño máximo y el tipo MIME real mediante finfo_file,
      * sin confiar en el tipo que manda el navegador ni en la extensión.
