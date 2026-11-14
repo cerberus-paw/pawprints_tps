@@ -180,9 +180,11 @@
           <a href="/catalogo">Ver todo el catálogo</a>.
         </p>
         {% else %}
-        <ul>
+        {# Una ItemList de Book (TP5, consigna 8): el listado es lo que se vende, no publicidad.
+           La posición sigue entre páginas: el primero de la página 2 no es el 1. #}
+        <ul itemscope itemtype="https://schema.org/ItemList">
           {% for libro in libros %}
-{{ include('partials/tarjeta-libro.html.twig', {libro: libro}, with_context = false) }}
+{{ include('partials/tarjeta-libro.html.twig', {libro: libro, posicion: primero + loop.index0}, with_context = false) }}
           {% endfor %}
         </ul>
 

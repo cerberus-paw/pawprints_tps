@@ -109,9 +109,10 @@
     <section aria-labelledby="titulo-recomendaciones">
       <h2 id="titulo-recomendaciones">Recomendaciones</h2>
 
-      <ul>
+      {# También una ItemList de Book (TP5, consigna 8), aparte del libro de la ficha. #}
+      <ul itemscope itemtype="https://schema.org/ItemList">
         {% for otro in recomendados %}
-{{ include('partials/tarjeta-libro.html.twig', {libro: otro, nivel: 3, resumen: false}, with_context = false) }}
+{{ include('partials/tarjeta-libro.html.twig', {libro: otro, nivel: 3, resumen: false, posicion: loop.index}, with_context = false) }}
         {% endfor %}
       </ul>
     </section>

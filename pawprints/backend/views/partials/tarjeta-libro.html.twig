@@ -14,26 +14,47 @@
     nivel   — el del título: 4 en el catálogo, que va debajo del h3 «Resultados», y 3 en las
               recomendaciones, que van debajo de un h2
     resumen — si lleva el resumen del libro: el catálogo sí, las recomendaciones no
+    posicion — su lugar en el listado, desde 1, para la microdata (TP5, consigna 8)
 
   Los ?? '' son para la tarjeta vacía: con libro en null, libro.titulo no existe.
+
+  Microdata: cada tarjeta es un ListItem de la ItemList que marca la lista, y adentro un Book con
+  su Offer (las mismas macros que la ficha). La tarjeta vacía del <template> no la lleva: el
+  contenido de un <template> no es parte de la página y los buscadores leen el listado que
+  imprime el servidor, que es el mismo que arma el JS para esa URL.
 #}
+{% import 'macros/microdata.html.twig' as microdata %}
 {% set nivel = nivel ?? 4 %}
 {% set ficha = libro ? '/libros/' ~ libro.id : '' %}
-          <li>
-            <article>
+{% set md = libro is not null %}
+          <li{% if md %} itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem"{% endif %}>
+            {%- if md %}
+            <meta itemprop="position" content="{{ posicion ?? 1 }}">
+            {%- endif %}
+            <article{% if md %} itemprop="item" itemscope itemtype="https://schema.org/Book"{% endif %}>
+              {%- if md %}
+              {{ microdata.libro(libro) }}
+              {%- endif %}
               <figure>
-                <img src="{{ libro ? '/img/' ~ libro.imagen : '' }}" alt="{{ libro ? 'Portada del libro ' ~ libro.titulo : '' }}">
+                <img src="{{ libro ? '/img/' ~ libro.imagen : '' }}" alt="{{ libro ? 'Portada del libro ' ~ libro.titulo : '' }}"{% if md %} itemprop="image"{% endif %}>
                 <figcaption data-campo="formato">{{ libro.formato ?? '' }}</figcaption>
               </figure>
               <header>
-                <p><small>GÉNERO: <span data-campo="genero">{{ libro.genero ?? '' }}</span></small></p>
-                <h{{ nivel }}><a href="{{ ficha }}" data-campo="titulo">{{ libro.titulo ?? '' }}</a></h{{ nivel }}>
-                <p><strong>Autor:</strong> <span data-campo="autor">{{ libro.autor ?? '' }}</span></p>
+                <p><small>GÉNERO: <span data-campo="genero"{% if md %} itemprop="genre"{% endif %}>{{ libro.genero ?? '' }}</span></small></p>
+                {# El itemprop va en un <span>: puesto en el <a>, la microdata toma el href y no el texto. #}
+                <h{{ nivel }}><a href="{{ ficha }}" data-campo="titulo">
+                  {%- if md %}<span itemprop="name">{{ libro.titulo }}</span>{% endif -%}
+                </a></h{{ nivel }}>
+                <p><strong>Autor:</strong> <span data-campo="autor"{% if md %} itemprop="author" itemscope itemtype="https://schema.org/Person"{% endif %}>
+                  {%- if md %}<span itemprop="name">{{ libro.autor }}</span>{% endif -%}
+                </span></p>
               </header>
               {%- if resumen ?? true %}
-              <p><small><strong>Descripción:</strong> <span data-campo="resumen">{{ libro.resumen ?? '' }}</span></small></p>
+              <p><small><strong>Descripción:</strong> <span data-campo="resumen"{% if md %} itemprop="description"{% endif %}>{{ libro.resumen ?? '' }}</span></small></p>
               {%- endif %}
-              <p><strong>Precio:</strong> <data value="{{ libro.precio ?? '' }}">{{ libro ? libro.precio|pesos : '' }}</data></p>
+              <p{% if md %} itemprop="offers" itemscope itemtype="https://schema.org/Offer"{% endif %}>
+                {%- if md %}{{ microdata.oferta(libro) }}{% endif -%}
+                <strong>Precio:</strong> <data value="{{ libro.precio ?? '' }}">{{ libro ? libro.precio|pesos : '' }}</data></p>
               <p><a href="{{ ficha }}">Ver detalles &rarr;</a></p>
             </article>
           </li>

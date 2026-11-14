@@ -1,8 +1,10 @@
 {#
   La portada (TP3, punto 2; Salvador): presentación, recomendaciones del librero, eventos y
-  la historia. Es contenido fijo: no lee nada de la base.
+  la historia. Es contenido fijo, salvo los libros recomendados, que desde el TP5 salen de la
+  base (HomeController::RECOMENDADOS).
 #}
 {% extends 'base.html.twig' %}
+{% import 'macros/microdata.html.twig' as microdata %}
 
 {% block contenido %}
   <main>
@@ -48,59 +50,28 @@
       <p><small>Nuestra selección</small></p>
       <h2>Recomendaciones del Librero</h2>
 
-      <ul>
-        <li>
-          <article>
+      {# Una ItemList de Book con su Offer (TP5, consigna 8), con las mismas macros que el
+         catálogo. La estructura de cada tarjeta es la de la portada del TP2 y no la de
+         partials/tarjeta-libro: inicio.css se cuelga de ella. #}
+      <ul itemscope itemtype="https://schema.org/ItemList">
+        {% for libro in recomendados %}
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <meta itemprop="position" content="{{ loop.index }}">
+          <article itemprop="item" itemscope itemtype="https://schema.org/Book">
+            {{ microdata.libro(libro) }}
             <figure>
-              <img src="/img/libro-1.jpg" alt="Portada de El Laberinto de los Vientos">
+              <img src="/img/{{ libro.imagen }}" alt="Portada de {{ libro.titulo }}" itemprop="image">
             </figure>
-            <p><small>Ficción</small></p>
-            <h3><a href="/libros/1">El Laberinto de los Vientos</a></h3>
-            <p><strong>Autor:</strong> Salvador Baez</p>
-            <p><strong>Precio:</strong> <data value="16500">$16.500</data></p>
-            <p><a href="/libros/1">Ver detalles &rarr;</a></p>
+            <p><small itemprop="genre">{{ libro.genero }}</small></p>
+            <h3><a href="/libros/{{ libro.id }}"><span itemprop="name">{{ libro.titulo }}</span></a></h3>
+            <p><strong>Autor:</strong> <span itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">{{ libro.autor }}</span></span></p>
+            <p itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+              {{- microdata.oferta(libro) -}}
+              <strong>Precio:</strong> <data value="{{ libro.precio }}">{{ libro.precio|pesos }}</data></p>
+            <p><a href="/libros/{{ libro.id }}">Ver detalles &rarr;</a></p>
           </article>
         </li>
-
-        <li>
-          <article>
-            <figure>
-              <img src="/img/libro-2.jpg" alt="Portada de El Secreto de la Torre">
-            </figure>
-            <p><small>Ficción</small></p>
-            <h3><a href="/libros/2">El Secreto de la Torre</a></h3>
-            <p><strong>Autor:</strong> Tomás Resnik</p>
-            <p><strong>Precio:</strong> <data value="14000">$14.000</data></p>
-            <p><a href="/libros/2">Ver detalles &rarr;</a></p>
-          </article>
-        </li>
-
-        <li>
-          <article>
-            <figure>
-              <img src="/img/libro-3.jpg" alt="Portada de Sombras en el Horizonte">
-            </figure>
-            <p><small>Ficción</small></p>
-            <h3><a href="/libros/3">Sombras en el Horizonte</a></h3>
-            <p><strong>Autor:</strong> Mateo Nomico</p>
-            <p><strong>Precio:</strong> <data value="15800">$15.800</data></p>
-            <p><a href="/libros/3">Ver detalles &rarr;</a></p>
-          </article>
-        </li>
-
-        <li>
-          <article>
-            <figure>
-              <img src="/img/libro-4.jpg" alt="Portada de Ecos del Cosmos">
-            </figure>
-            <p><small>Ciencia</small></p>
-            <h3><a href="/libros/4">Ecos del Cosmos</a></h3>
-            <p><strong>Autor:</strong> Salvador Baez</p>
-            <p><strong>Precio:</strong> <data value="17200">$17.200</data></p>
-            <p><a href="/libros/4">Ver detalles &rarr;</a></p>
-          </article>
-        </li>
-      </ul>
+        {% endfor %}
     </section>
 
     <hr>
