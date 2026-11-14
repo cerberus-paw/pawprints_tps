@@ -1,0 +1,42 @@
+{#
+  La microdata de schema.org (TP5, consigna 8) que no se ve en la página. Lo que sí se ve
+  (título, autor, precio…) lleva su itemprop en el mismo elemento que lo muestra; estas macros
+  agregan lo que el buscador necesita y la página no escribe, como la moneda o la disponibilidad
+  como URL de schema.org. El marcado de un libro queda en un solo lugar para la ficha y las
+  tarjetas del catálogo.
+
+  Uso, adentro del elemento con itemscope:
+    {% import 'macros/microdata.html.twig' as microdata %}
+    <article itemscope itemtype="https://schema.org/Book">
+      {{ microdata.libro(libro) }}
+      …
+      <p itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+        {{ microdata.oferta(libro) }}
+        <data value="…">$…</data>
+#}
+
+{# La URL de la ficha y el formato, en el vocabulario de schema.org (BookFormatType). #}
+{% macro libro(libro) %}
+{%- set formato = {
+  'Tapa Dura': 'Hardcover',
+  'Tapa Blanda': 'Paperback',
+  'Epub / Digital': 'EBook',
+}[libro.formato] ?? null -%}
+<link itemprop="url" href="/libros/{{ libro.id }}">
+{% if formato %}
+<link itemprop="bookFormat" href="https://schema.org/{{ formato }}">
+{%- endif %}
+{% endmacro %}
+
+{#
+  El precio como número, la moneda y si hay ejemplares, que la página dice con palabras
+  («$15.800», «EN STOCK»). El precio va en un <meta> y no en el <data value> que ya lo tiene:
+  según HTML el itemprop de <data> toma su value, pero el validador de schema.org (y con él,
+  los buscadores que lo siguen) lee el texto, «$15.800», que no es un precio.
+#}
+{% macro oferta(libro) %}
+<meta itemprop="price" content="{{ libro.precio }}">
+<meta itemprop="priceCurrency" content="ARS">
+<link itemprop="availability" href="https://schema.org/{{ libro.stock > 0 ? 'InStock' : 'OutOfStock' }}">
+<link itemprop="url" href="/libros/{{ libro.id }}">
+{% endmacro %}

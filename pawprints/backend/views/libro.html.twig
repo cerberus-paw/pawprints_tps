@@ -10,32 +10,58 @@
     recomendados — otros libros del catálogo, primero los del mismo género
 #}
 {% extends 'base.html.twig' %}
+{% import 'macros/microdata.html.twig' as microdata %}
 
 {% block contenido %}
   <main>
 
-    {# El botón de reservar lleva a /reserva con el libro ya elegido (punto 5). #}
-    <article aria-labelledby="titulo-libro-principal">
+    {# La miga de pan, que también se marca (TP5, consigna 8): el buscador la muestra en lugar de
+       la URL. Cada paso es un ListItem con su posición; el último, el libro, no lleva enlace
+       porque es esta misma página, pero sí su URL para la microdata. #}
+    <nav aria-label="Miga de pan" class="miga-de-pan">
+      <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a itemprop="item" href="/"><span itemprop="name">Inicio</span></a>
+          <meta itemprop="position" content="1">
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a itemprop="item" href="/catalogo"><span itemprop="name">Catálogo</span></a>
+          <meta itemprop="position" content="2">
+        </li>
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" aria-current="page">
+          <span itemprop="name">{{ libro.titulo }}</span>
+          <link itemprop="item" href="/libros/{{ libro.id }}">
+          <meta itemprop="position" content="3">
+        </li>
+      </ol>
+    </nav>
+
+    {# El libro es un Book de schema.org con su Offer (TP5, consigna 8). Cada dato lleva el
+       itemprop donde se muestra; lo que no se ve lo agregan las macros de microdata.
+       El botón de reservar lleva a /reserva con el libro ya elegido (punto 5). #}
+    <article aria-labelledby="titulo-libro-principal" itemscope itemtype="https://schema.org/Book">
+      {{ microdata.libro(libro) }}
       <header>
-        <p><small>GÉNERO: {{ libro.genero }} &bull; ISBN: {{ libro.isbn }}</small></p>
-        <h1 id="titulo-libro-principal">{{ libro.titulo }}</h1>
-        <p>Por <strong>{{ libro.autor }}</strong></p>
+        <p><small>GÉNERO: <span itemprop="genre">{{ libro.genero }}</span> &bull; ISBN: <span itemprop="isbn">{{ libro.isbn }}</span></small></p>
+        <h1 id="titulo-libro-principal" itemprop="name">{{ libro.titulo }}</h1>
+        <p>Por <strong itemprop="author" itemscope itemtype="https://schema.org/Person"><span itemprop="name">{{ libro.autor }}</span></strong></p>
       </header>
 
       <figure>
-        <img src="/img/{{ libro.imagen }}"
+        <img src="/img/{{ libro.imagen }}" itemprop="image"
              alt="Portada del libro {{ libro.titulo }} de {{ libro.autor }}">
         <figcaption>Portada oficial - {{ libro.titulo }}</figcaption>
       </figure>
 
       <section aria-labelledby="titulo-descripcion">
         <h2 id="titulo-descripcion">Descripción del libro</h2>
-        <p>{{ libro.descripcion }}</p>
+        <p itemprop="description">{{ libro.descripcion }}</p>
       </section>
 
       <section aria-labelledby="titulo-comprar-reservar">
         <h2 id="titulo-comprar-reservar" hidden>Opciones de compra y reserva</h2>
-        <p>
+        <p itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+          {{ microdata.oferta(libro) }}
           <strong>Precio:</strong> <data value="{{ libro.precio }}">{{ libro.precio|pesos }}</data>
           <mark>{{ libro.stock > 0 ? 'EN STOCK' : 'SIN STOCK' }}</mark>
         </p>

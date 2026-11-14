@@ -18,6 +18,39 @@
   gap: var(--sp-12);                                 /* Espaciado generoso entre secciones */
 }
 
+/* ── Miga de pan (TP5, consigna 8) ────────────────────────────
+   Pegada a la ficha: el margen negativo descuenta casi todo el gap
+   del main, que separa secciones y no una ficha de su miga. */
+.page-detalle-libro .miga-de-pan {
+  margin-bottom: calc(var(--sp-4) - var(--sp-12));
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.page-detalle-libro .miga-de-pan ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.page-detalle-libro .miga-de-pan li + li::before {
+  content: "›";
+  margin-right: var(--sp-2);
+  color: var(--muted);
+}
+
+.page-detalle-libro .miga-de-pan a {
+  color: var(--v700);
+}
+
+.page-detalle-libro .miga-de-pan [aria-current="page"] {
+  color: var(--dark);
+  font-weight: 600;
+}
+
 /* ================================================================
    1. SECCIÓN PRINCIPAL: FICHA TÉCNICA DEL LIBRO
    ================================================================ */
