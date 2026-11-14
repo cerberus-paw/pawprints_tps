@@ -36,6 +36,8 @@ class HomeController extends Controller
             'description' => 'Librería independiente en Mercedes, Buenos Aires. Catálogo en línea, envíos a toda Argentina y tienda física.',
             'activePage' => 'inicio',
             'pageClass' => 'page-inicio',
+            // El pie marca la tienda como BookStore (TP5, consigna 8).
+            'marcarTienda' => true,
             'extraCss' => ['inicio.css', 'carrusel.css'],
             'extraJs' => ['paginas/inicio.js'],
             'recomendados' => $recomendados,

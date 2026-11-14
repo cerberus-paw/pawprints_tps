@@ -19,6 +19,7 @@ use PawPrints\Core\Router;
 use PawPrints\Core\Sesion;
 use PawPrints\Core\SmtpMailer;
 use PawPrints\Core\View;
+use PawPrints\Models\Tienda;
 use RuntimeException;
 use Throwable;
 
@@ -121,15 +122,19 @@ final class App
         $declareRoutes = require $backendDir . '/routes.php';
         $declareRoutes($router);
 
+        // La caché de las plantillas compiladas, sólo en producción: en desarrollo, un cambio
+        // en una plantilla se ve al recargar sin borrar nada.
+        $view = new View(
+            $backendDir . '/views',
+            $config->inProduction() ? $backendDir . '/cache/twig' : false,
+            debug: !$config->inProduction(),
+        );
+        // Los datos de la tienda, que muestran el pie y varias páginas (TP5, consigna 8).
+        $view->compartir('tienda', Tienda::DATOS);
+
         return new self(
             $router,
-            // La caché de las plantillas compiladas, sólo en producción: en desarrollo, un cambio
-            // en una plantilla se ve al recargar sin borrar nada.
-            new View(
-                $backendDir . '/views',
-                $config->inProduction() ? $backendDir . '/cache/twig' : false,
-                debug: !$config->inProduction(),
-            ),
+            $view,
             $config,
             $logger,
             self::mailer($config, $backendDir),

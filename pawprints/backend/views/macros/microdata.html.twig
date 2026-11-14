@@ -40,3 +40,25 @@
 <link itemprop="availability" href="https://schema.org/{{ libro.stock > 0 ? 'InStock' : 'OutOfStock' }}">
 <link itemprop="url" href="/libros/{{ libro.id }}">
 {% endmacro %}
+
+{#
+  Lo de la tienda (BookStore) que la página no muestra: su dirección web y la foto del local.
+  Va adentro del elemento con itemscope, en la portada y en «Sobre nosotros» (ver
+  partials/pie.html.twig).
+#}
+{% macro tienda() %}
+<link itemprop="url" href="/">
+<link itemprop="image" href="/img/entrada-tienda.jpg">
+{% endmacro %}
+
+{#
+  La dirección de Models/Tienda en una línea, marcada como PostalAddress si «marcar»: la usan el
+  pie y «Sobre nosotros», así se escribe igual en los dos lugares.
+#}
+{% macro direccion(direccion, marcar) %}
+{%- if marcar -%}
+<span itemprop="address" itemscope itemtype="https://schema.org/PostalAddress"><span itemprop="streetAddress">{{ direccion.calle }}</span>, <span itemprop="addressLocality">{{ direccion.localidad }}</span>, <span itemprop="addressRegion">{{ direccion.provincia }}</span>, <span itemprop="addressCountry">{{ direccion.pais }}</span></span>
+{%- else -%}
+{{ direccion.calle }}, {{ direccion.localidad }}, {{ direccion.provincia }}, {{ direccion.pais }}
+{%- endif -%}
+{% endmacro %}

@@ -21,6 +21,8 @@ class SobreNosotrosController extends Controller
             'description' => 'La historia de PAWPrints, su misión y los servicios que ofrece a la comunidad de Mercedes.',
             'activePage' => 'sobre-nosotros',
             'pageClass' => 'page-sobre-nosotros',
+            // El pie marca la tienda como BookStore (TP5, consigna 8).
+            'marcarTienda' => true,
             'extraCss' => ['sobre-nosotros.css'],
         ]);
     }

@@ -1,4 +1,14 @@
-{# El carrito, compartido por todas las páginas, y el pie institucional con el contacto. #}
+{#
+  El carrito, compartido por todas las páginas, y el pie institucional con el contacto. Los datos
+  de la tienda vienen de Models/Tienda (variable «tienda», que App comparte con todas las vistas).
+
+  marcarTienda — si el pie marca la tienda como BookStore de schema.org (TP5, consigna 8). Lo
+  piden sólo la portada y «Sobre nosotros», donde la tienda es de lo que habla la página; en el
+  catálogo o en una ficha lo principal es el libro, y repetir la tienda en todas las páginas no le
+  agrega nada al buscador.
+#}
+{% import 'macros/microdata.html.twig' as microdata %}
+{% set md = marcarTienda ?? false %}
   <aside id="carrito">
     <h2>Carrito de compras</h2>
     <p>El carrito está vacío.</p>
@@ -6,11 +16,14 @@
 
   <hr>
 
-  <footer>
+  <footer{% if md %} itemscope itemtype="https://schema.org/BookStore"{% endif %}>
+    {%- if md %}
+    {{ microdata.tienda() }}
+    {%- endif %}
 
     <section>
-      <h2>PAWPrints</h2>
-      <p>
+      <h2{% if md %} itemprop="name"{% endif %}>{{ tienda.nombre }}</h2>
+      <p{% if md %} itemprop="description"{% endif %}>
         Un santuario para las palabras impresas y las almas lectoras.
         Visitanos en nuestra tienda física en Mercedes o explorá todo
         nuestro catálogo en línea.
@@ -29,12 +42,14 @@
 
     <section>
       <h2>Contacto &amp; Visita</h2>
+      {# Los itemprop van en un <span> dentro de los enlaces: en un <a>, la microdata toma el
+         href («tel:…») y no el texto. #}
       <address>
-        Instituto Uzue, Mercedes, Buenos Aires, Argentina<br>
-        Teléfono: <a href="tel:+54190168">+54 190168</a><br>
-        Correo: <a href="mailto:contacto@pawprints.com.ar">contacto@pawprints.com.ar</a>
+        {{ microdata.direccion(tienda.direccion, md) }}<br>
+        Teléfono: <a href="tel:{{ tienda.telefonoEnlace }}"><span{% if md %} itemprop="telephone"{% endif %}>{{ tienda.telefono }}</span></a><br>
+        Correo: <a href="mailto:{{ tienda.correo }}"><span{% if md %} itemprop="email"{% endif %}>{{ tienda.correo }}</span></a>
       </address>
-      <p>Horario de atención: lunes a sábados de 9 a 20 h.</p>
+      <p>Horario de atención: {% if md %}<meta itemprop="openingHours" content="{{ tienda.horarioSchema }}">{% endif %}{{ tienda.horario }}</p>
     </section>
 
     <section>
