@@ -58,6 +58,12 @@ class LibroNuevoController extends Controller
             return $this->mostrar($campos, $error->errores, 422, $tapaEnviada);
         }
 
+        // Sin tapa elegida, la de Open Library (TP5, consigna 7). También sin JavaScript: el
+        // formulario sólo la muestra, la busca el servidor.
+        if ($libro->imagen === null) {
+            $libro = $this->tapaDeOpenLibrary($libro);
+        }
+
         try {
             $id = $this->libros()->agregar($libro);
         } catch (LibroNuevoInvalido $error) {
@@ -71,6 +77,8 @@ class LibroNuevoController extends Controller
         $this->logger->info('Libro nuevo agregado al catálogo: id {id}, ISBN {isbn}', ['id' => $id, 'isbn' => $libro->isbn]);
         if ($libro->imagen !== null) {
             $this->logger->info('Tapa guardada: {archivo}', ['archivo' => $libro->imagen]);
+        } else {
+            $this->logger->info('El libro {id} quedó sin tapa: no se eligió una y Open Library no tiene', ['id' => $id]);
         }
 
         // 303 y a otra página, como la reserva: recargar la confirmación no vuelve a mandar el
@@ -155,21 +163,38 @@ class LibroNuevoController extends Controller
     }
 
     /**
+     * El libro con la tapa de Open Library guardada como si se hubiera subido: en
+     * frontend/img/tapas/ y con un nombre generado. Se descarga y no se enlaza, para que el
+     * catálogo no dependa de que Open Library esté en línea. Si no tiene tapa o no responde, el
+     * libro queda sin tapa y la ficha muestra la imagen por defecto.
+     */
+    private function tapaDeOpenLibrary(LibroNuevo $libro): LibroNuevo
+    {
+        $tapa = OpenLibrary::desdeConfig($this->config, $this->logger)->tapa($libro->isbn);
+        if ($tapa === null) {
+            return $libro;
+        }
+
+        $nombre = $this->nombreDeTapa($tapa['mime']);
+        if (@file_put_contents($this->carpetaDeTapas() . '/' . $nombre, $tapa['contenido']) === false) {
+            $this->logger->error('No se pudo guardar la tapa de Open Library en img/tapas/');
+
+            return $libro;
+        }
+        $this->logger->info('Tapa de Open Library para el ISBN {isbn}', ['isbn' => $libro->isbn]);
+
+        return $libro->conImagen($nombre);
+    }
+
+    /**
      * Guarda la imagen de la tapa en frontend/img/tapas/ con un nombre aleatorio seguro.
      *
      * @param array<string, mixed> $tapa
      */
     private function guardarTapa(array $tapa, string $mime): string
     {
-        $extension = LibroNuevo::MIMES_TAPA[$mime] ?? 'jpg';
-        $nombreGenerado = bin2hex(random_bytes(8)) . '.' . $extension;
-        $directorio = dirname(__DIR__, 3) . '/frontend/img/tapas';
-
-        if (!is_dir($directorio)) {
-            mkdir($directorio, 0755, true);
-        }
-
-        $destino = $directorio . '/' . $nombreGenerado;
+        $nombreGenerado = $this->nombreDeTapa($mime);
+        $destino = $this->carpetaDeTapas() . '/' . $nombreGenerado;
         $tmpName = (string) ($tapa['tmp_name'] ?? '');
 
         // move_uploaded_file para peticiones HTTP reales; rename/copy como soporte para CLI o pruebas.
@@ -182,12 +207,29 @@ class LibroNuevoController extends Controller
         return $nombreGenerado;
     }
 
+    /** Un nombre aleatorio con la extensión del tipo real: nunca el que trae el archivo. */
+    private function nombreDeTapa(string $mime): string
+    {
+        return bin2hex(random_bytes(8)) . '.' . (LibroNuevo::MIMES_TAPA[$mime] ?? 'jpg');
+    }
+
+    /** frontend/img/tapas/, que se crea la primera vez. */
+    private function carpetaDeTapas(): string
+    {
+        $directorio = dirname(__DIR__, 3) . '/frontend/img/tapas';
+        if (!is_dir($directorio)) {
+            mkdir($directorio, 0755, true);
+        }
+
+        return $directorio;
+    }
+
     /** Borra una tapa guardada en frontend/img/tapas/, si la hay. */
     private function borrarTapa(?string $archivo): void
     {
         // basename: el nombre lo genera guardarTapa(), pero borrar un archivo pide estar seguro
         // de que no se sale de la carpeta.
-        $ruta = dirname(__DIR__, 3) . '/frontend/img/tapas/' . basename((string) $archivo);
+        $ruta = $this->carpetaDeTapas() . '/' . basename((string) $archivo);
         if ($archivo !== null && is_file($ruta)) {
             unlink($ruta);
         }
