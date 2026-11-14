@@ -20,6 +20,10 @@ estado con el que se entregó.
 | --- | --- |
 | [`pawprints/frontend/`](pawprints/frontend/) | Raíz pública del sitio: front controller, [`css/`](pawprints/frontend/css/), [`js/`](pawprints/frontend/js/), [`img/`](pawprints/frontend/img/) y las maquetas del TP2 |
 | [`pawprints/backend/`](pawprints/backend/) | El backend en PHP, fuera de la raíz pública ([arquitectura](#1-arquitectura)) |
+| [`pawprints/backend/db/`](pawprints/backend/db/) | El SQL que crea la base y carga el catálogo ([TP5](#1-catálogo-en-una-base-de-datos-relacional)) |
+| [`pawprints/backend/views/`](pawprints/backend/views/) | Las plantillas de Twig ([TP5](#4-vistas-en-twig)) |
+| [`pawprints/backend/bin/`](pawprints/backend/bin/) | Scripts de línea de comandos: el alta del personal |
+| `pawprints/backend/vendor/`, `pawprints/backend/cache/` | Lo que instala Composer y las plantillas compiladas: no se versionan |
 | [`diseño/`](diseño/) | [SiteMap](diseño/SiteMap/), [wireframes](diseño/Wireframes/) y logo de la identidad corporativa |
 | [`autores.txt`](autores.txt) | Nombre, apellido y legajo de cada integrante |
 | [`VERSION`](VERSION) | Versión del proyecto, con versionado semántico |
@@ -924,6 +928,135 @@ ls -l /var/www/pawprints/pawprints/frontend/img/tapas/   # la tapa, con dueño w
 
 ## TP5 — Programación Backend 2
 
+El TP5 le agrega al sitio una base de datos relacional (MySQL 8.4), pasa las vistas a Twig, protege
+el sitio contra la inyección SQL y el XSS, completa la carga de libros con la API de Open Library y
+marca cada página con microdata. Está publicado en <https://3-23-199-91.sslip.io> (ver
+[Publicación](#publicación-1)) y se instala como dice [Cómo levantar el sitio](#cómo-levantar-el-sitio).
+
+Lo que se agregó al backend:
+
+| Ruta | Contenido |
+| --- | --- |
+| [`backend/composer.json`](pawprints/backend/composer.json) | Twig 3 y el autoload PSR-4 de las clases propias (`PawPrints\` → `src/`) |
+| [`backend/db/`](pawprints/backend/db/) | [`esquema.sql`](pawprints/backend/db/esquema.sql) (base, usuario, tablas y permisos) y [`libros.sql`](pawprints/backend/db/libros.sql) (los 30 libros) |
+| [`backend/bin/crear-personal.php`](pawprints/backend/bin/crear-personal.php) | Alta de una persona del personal, por línea de comandos |
+| [`backend/views/`](pawprints/backend/views/) | Las plantillas de Twig |
+| `backend/cache/` | Las plantillas compiladas, sólo en producción (no se versiona) |
+| `backend/vendor/` | Lo que instala Composer (no se versiona) |
+
+### 1. Catálogo en una base de datos relacional
+
+> Modifique su aplicación para que el listado y la búsqueda de libros sea realizado sobre una base de datos relacional. Tenga en cuenta que la misma esté disponible en el servicio donde desplegó su aplicación en el trabajo práctico 3 o en algún otro servicio donde pueda desplegarla.
+
+El catálogo pasó de `libros.json` a la tabla `libros` de MySQL 8.4. La búsqueda, los filtros, el
+orden y el paginado los resuelve la consulta, y PHP sólo recibe los libros de la página que se
+muestra.
+
+- [`esquema.sql`](pawprints/backend/db/esquema.sql) crea la base (`utf8mb4_0900_ai_ci`, que no
+  distingue tildes ni mayúsculas: buscar «ficcion» encuentra «Ficción»), el usuario del sitio y las
+  tablas `libros`, `reservas` y `personal`. Se puede correr en una máquina sin nada y volver a
+  correr sin perder datos (`IF NOT EXISTS`). [`libros.sql`](pawprints/backend/db/libros.sql) carga
+  los 30 libros del catálogo.
+- [`Database`](pawprints/backend/src/Core/Database.php) abre una sola conexión PDO por pedido, y
+  recién cuando algo la usa, con los datos de la sección `[db]` de `config.ini`.
+- [`LibroRepository`](pawprints/backend/src/Models/LibroRepository.php) arma un único `WHERE` con
+  la búsqueda (título, autor, género e ISBN, con y sin guiones), el género, el formato y el rango
+  de precio, y lo usan la lista (con `LIMIT` y `OFFSET`) y el total (`COUNT(*)`). El orden sale de
+  una lista cerrada y el `id` desempata.
+- El CSV, el JSON del catálogo, la ficha, los recomendados y los libros nuevos salen de la misma
+  tabla. Los controladores y las vistas no cambiaron: el repositorio devuelve los mismos datos que
+  devolvía con el JSON.
+
+#### Decisiones
+
+- **MySQL 8.4**, que es el que trae Ubuntu 26.04 en sus repositorios: en el servidor se instala
+  con `apt` sin agregar nada.
+- **El ISBN único es una columna generada sólo con los números** (`isbn_digitos`): «978-987-1234-56-1»
+  y «9789871234561» son el mismo libro y no pueden estar dos veces.
+- **Un libro sin tapa queda con la imagen en `NULL`**, que dice que no tiene, y se lee como
+  `sin-tapa.svg`: las vistas siempre reciben un archivo para mostrar.
+- La base está **en el mismo servidor** que el sitio, escuchando sólo en `127.0.0.1` (ver
+  [Publicación](#publicación-1)).
+
+### 2. Reservas guardadas
+
+> Modifique su aplicación para que, además de enviarse un correo electrónico al personal, se persista la reserva en el sistema.
+
+Cada reserva se guarda en la tabla `reservas` **antes** de mandar los correos, con
+[`ReservaRepository`](pawprints/backend/src/Models/ReservaRepository.php). El orden en
+[`ReservaController::enviar`](pawprints/backend/src/Controllers/ReservaController.php) es: validar
+→ guardar → aviso al personal → marcar que el aviso salió → confirmación al cliente.
+
+- Los dos correos dicen el número de la reserva («Nueva reserva #12: …»).
+- Si no se puede guardar, no sale ningún correo (el personal no recibe el aviso de una reserva que
+  no existe) y el cliente ve que no se pudo.
+- Si se guardó pero el aviso al personal no sale, la reserva queda con `aviso_enviado` en 0 y el
+  cliente igual ve la confirmación: el personal la encuentra en su listado, resaltada como «Sin
+  enviar». Cambia la decisión del TP3, donde la reserva se perdía si el correo no salía.
+- La fecha la pone la base, en la zona horaria de `app.zona_horaria`.
+
+### 3. Listado de pedidos para el personal
+
+> Implementa un listado de pedidos que sea accesible solo por el personal de la empresa.
+
+El listado está en `/personal/pedidos`
+([`PersonalController::pedidos`](pawprints/backend/src/Controllers/PersonalController.php),
+[`pedidos.html.twig`](pawprints/backend/views/personal/pedidos.html.twig)): una tabla paginada con
+el número, la fecha, el libro, la cantidad, los datos del cliente, los comentarios y si salió el
+aviso, de la más nueva a la más vieja.
+
+Para entrar hace falta un **usuario del personal**:
+
+- No hay registro público: los pedidos tienen los datos de los clientes. Cada usuario se da de alta
+  en el servidor con [`bin/crear-personal.php`](pawprints/backend/bin/crear-personal.php), que pide
+  el usuario, el nombre y la contraseña (sin mostrarla), y guarda sólo el hash de `password_hash()`.
+- El ingreso está en `/personal/ingresar`. Un error dice «Usuario o contraseña incorrectos», sin
+  decir cuál de los dos, y un usuario que no existe tarda lo mismo que uno que sí.
+- La sesión ([`Sesion`](pawprints/backend/src/Core/Sesion.php)) se abre sólo para el personal. Su
+  cookie es `HttpOnly`, `SameSite=Lax` y `Secure` con HTTPS, y el id se regenera al ingresar.
+- Las páginas del personal (los pedidos y la carga de libros) llaman a
+  [`Controller::exigirPersonal()`](pawprints/backend/src/Core/Controller.php) al empezar: sin
+  sesión, llevan al ingreso y después vuelven a la misma página. Salen con
+  `Cache-Control: no-store`, para que después de salir «atrás» no las muestre.
+- Ingresar, salir y cargar un libro son formularios con un token CSRF.
+- Con la sesión iniciada, el menú muestra «Pedidos», «Cargar libro» y «Salir».
+
+### 4. Vistas en Twig
+
+> Migrar todas las vistas al motor de Templates Twig. En los casos que sea adecuado, utilizar la herencia y composición de la librería para mejorar la reutilización de vistas.
+
+Todas las vistas, incluidos los correos, son plantillas de Twig en
+[`backend/views/`](pawprints/backend/views/); no queda ninguna vista en PHP. Twig se instala con
+Composer y lo usa [`View`](pawprints/backend/src/Core/View.php), que es la única clase que lo
+conoce: los controladores siguen llamando a `render('catalogo', [...])`.
+
+- **Herencia.** [`base.html.twig`](pawprints/backend/views/base.html.twig) tiene el `<head>`, el menú
+  y el pie, con bloques para el contenido, el título, la descripción, el CSS y el JS de cada
+  página. Cada página la extiende y sólo escribe su `contenido`. Los correos extienden
+  [`correos/base.txt.twig`](pawprints/backend/views/correos/base.txt.twig), que pone la firma.
+- **Composición con `include`.** El menú, el pie, el paginado (que usan el catálogo y los pedidos)
+  y la tarjeta de libro (que usan el catálogo, los recomendados de la ficha y el `<template>` que
+  completa el JS del catálogo) están en [`partials/`](pawprints/backend/views/partials/). Se incluyen
+  sin el contexto de la página cuando no lo necesitan, para que no dependan de sus variables.
+- **Macros.** [`campos.html.twig`](pawprints/backend/views/macros/campos.html.twig) arma los
+  atributos de accesibilidad y validación de cada campo de los formularios, el mensaje de error y
+  las opciones de un desplegable; [`microdata.html.twig`](pawprints/backend/views/macros/microdata.html.twig),
+  la microdata de la consigna 8.
+- **Filtros propios**: `pesos` (`$16.500`) y `slug`.
+- **Datos para todas las vistas** (`View::compartir`): quién del personal ingresó, para el menú, y
+  los datos de la tienda.
+- En producción Twig guarda las plantillas compiladas en `backend/cache/`; en desarrollo no, así un
+  cambio se ve al recargar.
+
+#### Decisiones
+
+- **El escape automático de Twig depende de la extensión** (estrategia `name`): todo lo que se
+  imprime en un `.html.twig` sale escapado para HTML, que es la base de la protección contra el XSS
+  de la consigna 6. Los correos son `.txt.twig` y no se escapan: van como `text/plain`, y un `&`
+  que escribió el cliente tiene que llegar como `&` y no como `&amp;`.
+- **La portada no usa la tarjeta de libro compartida**: `inicio.css` se cuelga de la estructura de
+  la portada del TP2, distinta de la del catálogo.
+
 ### 5. Inyección SQL
 
 > ¿Qué es un ataque de inyección SQL? ¿Cómo puede evitarse? Realice las modificaciones necesarias en su aplicación para protegerse de dichos ataques.
@@ -1112,6 +1245,60 @@ En todos los casos la carga se ve escrita, tal cual.
 | DOM | Zona de arrastre | Una tapa llamada `<img src=x onerror=alert(7)>.jpg` | El nombre del archivo se ve escrito en la vista previa |
 | Sesión | Consola, con la sesión del personal iniciada | `document.cookie` | Vacío: la cookie es `HttpOnly` |
 | CSP | Catálogo, desde la consola | Agregar un `<script>` y un `<img onerror>` a la página | No se ejecutan: la CSP los bloquea (sin la cabecera, los dos se ejecutan) |
+
+### 7. Autorrelleno con Open Library
+
+> Generar la conexión a la API de Open Library (https://openlibrary.org/developers/api) para precargar los datos del libro nuevo, de tal manera que se “autorellene” el formulario de carga de libro implementando en el trabajo anterior con los datos conseguidos a través de la API. Adicionalmente, al momento de persistir un libro, si desde el formulario no se especificó una imagen de su tapa, debe recuperarse una desde la API.
+
+En el formulario de libros nuevos (`/libros/nuevo`), al escribir un ISBN válido y salir del campo,
+o con el botón «Buscar datos», se completan el **título**, el **autor** y la **descripción** con los
+datos de Open Library, y se muestra su **tapa** en la zona de arrastre. Al guardar un libro sin
+tapa, el servidor descarga la de Open Library.
+
+- [`OpenLibrary`](pawprints/backend/src/Models/OpenLibrary.php) es el cliente de la API:
+  `buscarPorIsbn()` usa `/api/books?bibkeys=ISBN:…&jscmd=data` (título, subtítulo, autores y tapa)
+  y busca la descripción en la edición o en la obra; `tapa()` baja
+  `covers.openlibrary.org/b/isbn/<isbn>-L.jpg?default=false`. Espera hasta 5 segundos y nunca corta
+  el pedido: si Open Library no responde, queda en el log y se sigue a mano.
+- La ruta `GET /libros/isbn/{isbn}`
+  ([`LibroNuevoController::isbn`](pawprints/backend/src/Controllers/LibroNuevoController.php)),
+  sólo para el personal, devuelve esos datos en JSON: 200, 404 si Open Library no tiene el ISBN,
+  503 si no respondió y 400 si el ISBN no es válido. También dice si ya está en el catálogo.
+- [`autorrelleno-isbn.js`](pawprints/frontend/js/componentes/autorrelleno-isbn.js), un componente
+  sin librerías como los del TP4, hace el pedido, completa **sólo los campos vacíos** (no pisa lo
+  que ya se escribió), revalida los campos y avisa el resultado en una región `role="status"`.
+- Al guardar sin tapa,
+  [`LibroNuevoController::cargar`](pawprints/backend/src/Controllers/LibroNuevoController.php) le pide
+  la tapa a `OpenLibrary`, la valida como una subida (tipo real con `finfo`, JPG, PNG o WebP, hasta
+  2 MB) y la guarda en `frontend/img/tapas/` con un nombre generado. Si no tiene, el libro queda
+  sin tapa y se ve `sin-tapa.svg`.
+
+#### Decisiones
+
+- **El navegador no le habla a Open Library: pasa por nuestro backend.** Así la CSP de la consigna
+  6 no tiene que abrir `connect-src` a otro dominio, y el mismo cliente sirve para buscar la tapa
+  al guardar. La vista previa sí carga la imagen de `covers.openlibrary.org`, que la CSP permite.
+- **La tapa se descarga y se guarda, no se enlaza**: el catálogo no depende de que Open Library
+  esté en línea.
+- **Funciona sin JavaScript**: el botón y los avisos los agrega el JS, y la tapa la busca el
+  servidor al guardar, así que sin JS se completa a mano como en el TP4 y la tapa llega igual.
+- **No se completan el precio, el stock, el género ni el formato**: Open Library no tiene precio
+  ni stock, y sus temas («Juvenile fiction», «Foxes») no coinciden con nuestros géneros.
+- Lo que llega se **recorta a los largos máximos** del formulario y sin caracteres de control,
+  para que pase la misma validación que lo escrito a mano. Si el libro tiene subtítulo y entra, va
+  con el título.
+
+#### Pruebas
+
+| Caso | Qué pasa |
+| --- | --- |
+| ISBN `9780140328721` con el título vacío | Se completan *Fantastic Mr. Fox*, Roald Dahl y la descripción, y aparece la tapa |
+| El mismo ISBN con un título ya escrito | El título no cambia; se completan el autor y la descripción |
+| ISBN `978-987-1234-56-1` (válido, Open Library no lo tiene, ya está en el catálogo) | Avisa las dos cosas y se carga a mano |
+| ISBN con el dígito verificador mal | Pide un ISBN válido, sin consultar al servidor |
+| Open Library caído (URL de prueba en `config.ini`) | 503: «Open Library no responde en este momento» |
+| Guardar `9780140328721` sin tapa, con JavaScript apagado | La tapa de Open Library queda en `img/tapas/` y se ve en la ficha |
+| Guardar un ISBN sin tapa en Open Library | El libro queda con la tapa por defecto |
 
 ### 8. Microdata
 
