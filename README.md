@@ -1429,9 +1429,15 @@ resultados. La pregunta para cada objeto es si la página es la respuesta a una 
 
 #### Pruebas
 
-La portada, el catálogo (páginas 1 y 2), una búsqueda sin resultados, una ficha y «Sobre
-nosotros» pasan el [validador de schema.org](https://validator.schema.org/) sin errores ni avisos.
-Con el stock de un libro en 0, su ficha cambia `availability` a `OutOfStock`.
+- El catálogo (páginas 1 y 2), una búsqueda sin resultados, una ficha y la portada con sus
+  recomendaciones pasan el [validador de schema.org](https://validator.schema.org/) sin errores ni
+  avisos.
+- La tienda (`BookStore`, en la portada y en «Sobre nosotros») se agregó después, cuando el
+  validador ya no aceptaba más pedidos desde nuestra conexión. Se revisó leyendo la microdata de
+  las cuatro páginas con [extruct](https://github.com/scrapinghub/extruct) y comparándola con el
+  vocabulario de schema.org (que cada tipo exista, que admita cada propiedad y que los valores de
+  enumeraciones existan): sin errores.
+- Con el stock de un libro en 0, su ficha cambia `availability` a `OutOfStock`.
 
 ### Publicación
 
