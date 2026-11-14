@@ -11,6 +11,7 @@ use PawPrints\Core\Response;
 use PawPrints\Models\LibroNuevo;
 use PawPrints\Models\LibroNuevoInvalido;
 use PawPrints\Models\LibroRepository;
+use PawPrints\Models\OpenLibrary;
 
 /**
  * La carga de libros nuevos (TP4, consigna 2): el formulario, con validaciones en línea en el
@@ -100,6 +101,57 @@ class LibroNuevoController extends Controller
             'libro' => $libro,
             'sinTapa' => $libro['imagen'] === LibroRepository::SIN_TAPA,
         ]);
+    }
+
+    /**
+     * GET /libros/isbn/{isbn} — los datos de Open Library de un ISBN, en JSON, para el
+     * autorrelleno de la carga (TP5, consigna 7). El navegador le pide a esta ruta y no a Open
+     * Library: así la CSP no abre connect-src a otro dominio.
+     *
+     * - 200 con titulo, autor, descripcion y tapa (la URL de la vista previa, o null);
+     * - 400 si el ISBN no es válido: no se sale a buscar algo que no puede existir;
+     * - 404 si Open Library no lo tiene, y 503 si no respondió;
+     * - 401 si no ingresó nadie del personal.
+     *
+     * Todas las respuestas, salvo la 400 y la 401, dicen en «catalogo» si ese ISBN ya está
+     * cargado, para avisar antes de cargarlo dos veces.
+     */
+    public function isbn(Request $request): Response
+    {
+        // Un fetch no puede seguir la redirección al ingreso como una página: se le contesta 401
+        // y el formulario avisa que hay que volver a ingresar.
+        if ($this->sesion->personal() === null) {
+            return Response::json(['error' => 'Tu sesión venció: volvé a ingresar para buscar los datos del libro.'], 401);
+        }
+        $this->exigirPersonal($request);
+
+        $isbn = trim((string) $request->param('isbn'));
+        $digitos = (string) preg_replace('/\D/', '', $isbn);
+        if (preg_match('/^' . LibroNuevo::PATRON_ISBN . '$/', $isbn) !== 1) {
+            return Response::json(['error' => LibroNuevo::MENSAJES['isbn']['formato']], 400);
+        }
+        if (!LibroNuevo::isbnValido($digitos)) {
+            return Response::json(['error' => LibroNuevo::MENSAJES['isbn']['isbn']], 400);
+        }
+
+        $cargado = $this->libros()->porIsbn($digitos);
+        $catalogo = $cargado === null ? null : ['id' => $cargado['id'], 'titulo' => $cargado['titulo']];
+
+        $datos = OpenLibrary::desdeConfig($this->config, $this->logger)->buscarPorIsbn($digitos);
+        if ($datos === false) {
+            return Response::json([
+                'error' => 'Open Library no responde en este momento. Podés completar los datos a mano.',
+                'catalogo' => $catalogo,
+            ], 503);
+        }
+        if ($datos === null) {
+            return Response::json([
+                'error' => 'Open Library no tiene ese ISBN. Completá los datos a mano.',
+                'catalogo' => $catalogo,
+            ], 404);
+        }
+
+        return Response::json($datos + ['catalogo' => $catalogo]);
     }
 
     /**

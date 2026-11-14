@@ -30,6 +30,9 @@ return static function (Router $router): void {
     $router->get('/libros/nuevo', [LibroNuevoController::class, 'formulario']);
     $router->post('/libros/nuevo', [LibroNuevoController::class, 'cargar']);
     $router->get('/libros/nuevo/confirmacion', [LibroNuevoController::class, 'confirmacion']);
+    // Los datos de Open Library de un ISBN para completar la carga (TP5, consigna 7). También
+    // antes que /libros/{id}.
+    $router->get('/libros/isbn/{isbn}', [LibroNuevoController::class, 'isbn']);
     $router->get('/libros/{id}', [CatalogoController::class, 'libro']);
 
     // El mismo /reserva muestra el formulario (GET) y lo recibe (POST).
