@@ -34,55 +34,107 @@ Las cinco maquetas del TP2: [inicio](pawprints/frontend/index.html) · [catálog
 
 ## Cómo levantar el sitio
 
-Requisitos: **PHP 8.3 o superior** (con el servidor web incorporado y las extensiones `openssl` y
-`pdo_mysql`), **MySQL 8.4**, **[Composer](https://getcomposer.org/) 2** y **Git**. Composer
-instala Twig y el autoload de las clases. Los libros están en la base: los cargan
-[`db/esquema.sql`](pawprints/backend/db/esquema.sql), que crea la base, su usuario y las tablas,
-y [`db/libros.sql`](pawprints/backend/db/libros.sql). Los dos se corren como root y se pueden
-volver a correr sin perder datos.
+Requisitos:
+
+| Software | Versión | Para qué |
+| --- | --- | --- |
+| PHP | 8.3 o superior, con `pdo_mysql` | El sitio y su servidor web incorporado (`php -S`) |
+| MySQL | 8.4 | El catálogo, las reservas y el personal |
+| [Composer](https://getcomposer.org/) | 2 | Instala Twig y arma el autoload de las clases |
+| Git | cualquiera | Bajar el repositorio |
+
+La guía se probó en un **Ubuntu 26.04 recién instalado** (PHP 8.5.4, MySQL 8.4.13, Composer
+2.9.5, Twig 3.30.0) y en CachyOS (PHP 8.5.12, MySQL 8.4.11, Composer 2.11.2). Los comandos son para Ubuntu o Debian; en
+otro sistema, sólo cambia la instalación del paso 1.
+
+**1. Instalar lo necesario:**
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git php-cli php-mysql composer mysql-server
+```
+
+**2. Bajar el repositorio e instalar las dependencias:**
 
 ```bash
 git clone https://github.com/cerberus-paw/pawprints_tps.git
 cd pawprints_tps
 composer install --working-dir=pawprints/backend
-mysql -u root -p < pawprints/backend/db/esquema.sql
-mysql -u root -p < pawprints/backend/db/libros.sql
+```
+
+**3. Crear la base y cargar el catálogo.** [`esquema.sql`](pawprints/backend/db/esquema.sql) crea la
+base `pawprints`, su usuario y las tablas, y [`libros.sql`](pawprints/backend/db/libros.sql) carga
+los 30 libros. Se corren como root de MySQL, que en Ubuntu entra con `sudo` y sin contraseña:
+
+```bash
+sudo mysql < pawprints/backend/db/esquema.sql
+sudo mysql < pawprints/backend/db/libros.sql
+```
+
+Si el root de MySQL tiene contraseña (en otros sistemas), es `mysql -u root -p < …`. Los dos
+scripts no suponen nada de la máquina y se pueden volver a correr sin perder datos.
+
+**4. Copiar la configuración:**
+
+```bash
 cp pawprints/backend/config/config.example.ini pawprints/backend/config/config.ini
+```
+
+El ejemplo ya tiene el usuario y la clave de la base que crea `esquema.sql`: para probar el sitio
+no hace falta cambiar nada.
+
+**5. Crear un usuario del personal**, para ver los pedidos y cargar libros. Pide el usuario, el
+nombre y la contraseña (de al menos 8 caracteres), sin mostrarla:
+
+```bash
+php pawprints/backend/bin/crear-personal.php
+```
+
+**6. Levantar el sitio:**
+
+```bash
 php -S localhost:8080 -t pawprints/frontend
 ```
 
-Abrir <http://localhost:8080/>. Para detener el servidor, `Ctrl+C`.
+Abrir <http://localhost:8080/>. El personal ingresa en <http://localhost:8080/personal/ingresar>.
+Para detener el servidor, `Ctrl+C`.
 
-El único archivo de configuración es `pawprints/backend/config/config.ini` (el ejemplo, copiado):
+El único archivo de configuración es `pawprints/backend/config/config.ini`:
 
 | Clave | Para qué | Valor para trabajar en una máquina propia |
 | --- | --- | --- |
 | `db.*` | Servidor, puerto, base, usuario y clave de MySQL | Los del ejemplo, que son los que crea `esquema.sql` |
-| `app.entorno` | Cuánto detalle de un error ve el cliente | El ejemplo trae `"produccion"`. Con `"desarrollo"` la página de error agrega el detalle |
+| `app.entorno` | Cuánto detalle de un error ve el cliente, y si se guardan las plantillas compiladas | El ejemplo trae `"produccion"`. Con `"desarrollo"` la página de error agrega el detalle y un cambio en una plantilla se ve al recargar |
 | `correo.transporte` | Qué se hace con cada correo | `"archivo"`, que viene por defecto: los guarda como `.eml` en `pawprints/backend/logs/correos/` en lugar de mandarlos |
 | `correo.reservas` | A quién le llega el aviso de cada reserva | Cualquier dirección |
 | `smtp.*` | Servidor, usuario y contraseña, sólo con `transporte = "smtp"` | Vacío |
+| `open_library.*` | Las direcciones de la API de Open Library | Las del ejemplo (si faltan, se usan esas mismas) |
 
-Si el puerto 8080 está ocupado, se usa otro en el mismo comando (`php -S localhost:8090 …`).
-El servidor, el log (`pawprints/backend/logs/app.log`), los correos y las tapas que se cargan en
-<http://localhost:8080/libros/nuevo> (`pawprints/frontend/img/tapas/`) quedan en la carpeta del
-repositorio: no hace falta crear ni dar permisos a nada. Tampoco hay que tocar la configuración de
-PHP: la tapa acepta hasta 2 MB, que es el `upload_max_filesize` que trae por defecto.
+Si el puerto 8080 está ocupado, se usa otro en el mismo comando (`php -S localhost:8090 …`). Si
+MySQL no está en `127.0.0.1:3306`, se cambian `db.servidor` y `db.puerto`.
+El log (`pawprints/backend/logs/app.log`), los correos, las plantillas compiladas
+(`pawprints/backend/cache/`) y las tapas que se cargan en <http://localhost:8080/libros/nuevo>
+(`pawprints/frontend/img/tapas/`) quedan en la carpeta del repositorio: con `php -S` no hace falta
+dar permisos a nada. Tampoco hay que tocar la configuración de PHP: la tapa acepta hasta 2 MB, que
+es el `upload_max_filesize` que trae por defecto.
 
 Para verificar que las rutas responden lo que corresponde (con el servidor andando):
 
 ```bash
-for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /catalogo/json /libros/1 /libros/nuevo \
-         /reserva /libros/9999 /xyz; do
+for r in / /sobre-nosotros /catalogo "/catalogo?q=baez" /catalogo/csv /catalogo/json /libros/1 \
+         /reserva /personal/ingresar /personal/pedidos /libros/nuevo /libros/9999 /xyz; do
   printf '%-22s %s\n' "$r" "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:8080$r")"
 done
 ```
 
-Las nueve primeras responden `200` y las dos últimas, `404`. Para ver una reserva de punta a punta,
-completar el formulario en <http://localhost:8080/reserva>: el aviso al personal y la confirmación
-quedan como dos `.eml` en `pawprints/backend/logs/correos/`.
+Las nueve primeras responden `200`; `/personal/pedidos` y `/libros/nuevo`, `303`, porque llevan al
+ingreso del personal; y las dos últimas, `404`. Para ver una reserva de punta a punta, completar
+el formulario en <http://localhost:8080/reserva>: el aviso al personal y la confirmación quedan
+como dos `.eml` en `pawprints/backend/logs/correos/`, y la reserva aparece en
+<http://localhost:8080/personal/pedidos> después de ingresar.
 
-Para publicarlo en un servidor, ver el [punto 7 del TP3](#7-publicación).
+Para publicarlo en un servidor, ver el [punto 7 del TP3](#7-publicación) y la
+[publicación del TP5](#publicación-1), que agrega MySQL y Composer.
 
 ## TP1 — Maquetado web
 
@@ -1503,10 +1555,12 @@ prueba se borró después.
 
 | Componente | Versión |
 | --- | --- |
-| Sistema operativo | CachyOS (Arch Linux), kernel 7.3.1 |
-| Navegador | Mozilla Firefox 159.0 |
+| Sistema operativo | CachyOS (Arch Linux), kernel 7.3.3 |
+| Navegadores | Mozilla Firefox 160.0 y Google Chrome 157 |
 | Servidor de pruebas | PHP 8.5.12 (`php -S`) |
-| Control de versiones | Git 2.56.0 |
+| Base de datos | MySQL 8.4.11 (en un contenedor de Docker) |
+| Dependencias | Composer 2.11.2 · Twig 3.30.0 |
+| Control de versiones | Git 2.56.1 |
 | Wireframes · SiteMap | Figma · Whimsical |
 
 El sitio se sirve con PHP (el servidor incorporado en desarrollo, Apache en el servidor publicado)
