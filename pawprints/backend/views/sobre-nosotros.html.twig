@@ -3,6 +3,7 @@
   tienda. Es contenido fijo.
 #}
 {% extends 'base.html.twig' %}
+{% import 'macros/microdata.html.twig' as microdata %}
 
 {% block contenido %}
   <main>
@@ -80,9 +81,9 @@
 
       <address>
         <ul>
-          <li>Instituto Uzue, Mercedes, Buenos Aires, Argentina</li>
-          <li>Teléfono: <a href="tel:+54190168">+54 190168</a></li>
-          <li>Horario de atención: lunes a sábados de 9 a 20 h.</li>
+          <li>{{ microdata.direccion(tienda.direccion, false) }}</li>
+          <li>Teléfono: <a href="tel:{{ tienda.telefonoEnlace }}">{{ tienda.telefono }}</a></li>
+          <li>Horario de atención: {{ tienda.horario }}</li>
         </ul>
       </address>
 

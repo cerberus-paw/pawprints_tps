@@ -14,7 +14,7 @@ Recibimos tu reserva de {{ reserva.cantidad == 1 ? 'un ejemplar' : reserva.canti
 Es la número {{ numero }}: si nos escribís por ella, mencionala.
 
 La reserva queda guardada por 10 días hábiles, y se paga al retirarla en la tienda:
-Instituto Uzue, Mercedes, Buenos Aires. Lunes a sábados de 9 a 20 h.
+{{ tienda.direccion.calle }}, {{ tienda.direccion.localidad }}, {{ tienda.direccion.provincia }}. Horario: {{ tienda.horario }}
 
 Si tenés alguna pregunta o querés cancelarla, respondé este correo.
 

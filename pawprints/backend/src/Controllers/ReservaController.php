@@ -13,6 +13,7 @@ use PawPrints\Models\LibroRepository;
 use PawPrints\Models\Reserva;
 use PawPrints\Models\ReservaInvalida;
 use PawPrints\Models\ReservaRepository;
+use PawPrints\Models\Tienda;
 use RuntimeException;
 
 /**
@@ -70,7 +71,7 @@ class ReservaController extends Controller
             ]);
 
             return $this->mostrar($campos, [
-                'envio' => 'No pudimos registrar tu reserva. Probá de nuevo en unos minutos o llamanos al +54 190168.',
+                'envio' => 'No pudimos registrar tu reserva. Probá de nuevo en unos minutos o llamanos al ' . Tienda::DATOS['telefono'] . '.',
             ], 503);
         }
 
