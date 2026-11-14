@@ -1194,6 +1194,124 @@ La portada, el catálogo (páginas 1 y 2), una búsqueda sin resultados, una fic
 nosotros» pasan el [validador de schema.org](https://validator.schema.org/) sin errores ni avisos.
 Con el stock de un libro en 0, su ficha cambia `availability` a `OutOfStock`.
 
+### Publicación
+
+El TP5 está en la misma dirección que el TP3 y el TP4, **<https://3-23-199-91.sslip.io>**, en el
+mismo servidor (EC2 `t3.micro` con Ubuntu 26.04.1, Apache y PHP 8.5.4). Lo nuevo es la base de
+datos, que va en el mismo servidor, y las dependencias de Composer. Se corrió, como `ubuntu`:
+
+**1. Memoria de intercambio.** El `t3.micro` tiene 1 GB para Apache y MySQL juntos, y no traía
+swap:
+
+```bash
+sudo fallocate -l 1G /swapfile && sudo chmod 600 /swapfile
+sudo mkswap /swapfile && sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```
+
+**2. MySQL, la extensión de PDO y Composer**, de los repositorios de Ubuntu (MySQL 8.4.13,
+php8.5-mysql 8.5.4, Composer 2.9.5):
+
+```bash
+sudo apt-get update
+sudo apt-get install -y mysql-server php8.5-mysql composer
+```
+
+**3. Configuración de MySQL.** Un archivo nuevo, `/etc/mysql/mysql.conf.d/pawprints.cnf`:
+
+```ini
+[mysqld]
+bind-address = 127.0.0.1
+mysqlx-bind-address = 127.0.0.1
+performance_schema = OFF
+innodb_buffer_pool_size = 128M
+```
+
+La base escucha sólo en `127.0.0.1`: el sitio está en el mismo servidor y el puerto 3306 no queda
+expuesto (Ubuntu ya trae ese valor; se deja escrito para que no dependa de eso). Las otras dos
+líneas bajan la memoria que usa MySQL, pensada para servidores más grandes: el catálogo entra
+entero en 128 MB.
+
+```bash
+sudo systemctl restart mysql
+```
+
+**4. Código, dependencias y caché de las plantillas:**
+
+```bash
+cd /var/www/pawprints
+sudo git pull --ff-only
+cd pawprints/backend
+sudo COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
+sudo mkdir -p cache && sudo chown www-data:www-data cache
+```
+
+`--no-dev` deja afuera lo que sólo se usa para programar, y `--optimize-autoloader` arma el mapa
+de clases una vez en lugar de buscarlas en cada pedido. En producción Twig guarda las plantillas
+compiladas en `backend/cache/`, que tiene que poder escribir Apache.
+
+**5. La base.** `esquema.sql` y `libros.sql` se corren como `root` de MySQL, que en Ubuntu entra
+con el usuario del sistema (`sudo mysql`, sin contraseña). Después se le cambia la contraseña al
+usuario `pawprints`, que en `esquema.sql` es la de desarrollo:
+
+```bash
+sudo mysql < db/esquema.sql
+sudo mysql < db/libros.sql
+sudo mysql -e "ALTER USER 'pawprints'@'localhost' IDENTIFIED BY '<clave nueva>';
+               ALTER USER 'pawprints'@'127.0.0.1' IDENTIFIED BY '<clave nueva>';"
+```
+
+y en `backend/config/config.ini` se agregó la sección `[db]` con esa clave, que sólo está en el
+servidor:
+
+```ini
+[db]
+servidor = "127.0.0.1"
+puerto = 3306
+base = "pawprints"
+usuario = "pawprints"
+clave = "<clave nueva>"
+```
+
+La sección `[open_library]` no hace falta: sin ella se usan las direcciones de Open Library.
+
+**6. El personal.** Un usuario por integrante, cada uno con su contraseña, que se le pasó por
+privado:
+
+```bash
+sudo php bin/crear-personal.php
+```
+
+Apache no cambió: el `X-Content-Type-Options: nosniff` de los archivos estáticos ya estaba en el
+sitio de HTTPS desde el TP3. Los correos siguen guardándose como archivo
+(`correo.transporte = "archivo"`), igual que en el TP3 y el TP4, porque el grupo no tiene una
+cuenta de correo para el sitio; para mandarlos de verdad alcanza con completar `[smtp]` y pasar a
+`"smtp"`.
+
+Para actualizar el sitio con una versión nueva:
+
+```bash
+cd /var/www/pawprints && sudo git pull --ff-only
+cd pawprints/backend && sudo COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
+```
+
+Cómo se comprobó que anda:
+
+```bash
+U=https://3-23-199-91.sslip.io
+for r in / /catalogo "/catalogo?q=cosmos" /libros/3 /sobre-nosotros /reserva /personal/ingresar \
+         /catalogo/json; do
+  printf '%-20s %s\n' "$r" "$(curl -s -o /dev/null -w '%{http_code}' "$U$r")"
+done                                                       # todas 200
+curl -s -o /dev/null -w '%{http_code}\n' $U/personal/pedidos # 303: pide ingresar
+timeout 5 bash -c '</dev/tcp/3.23.199.91/3306' || echo "3306 cerrado"
+```
+
+Y en Chrome, en la dirección pública y también a 390 px de ancho: una reserva que aparece en el
+listado de pedidos, el ingreso del personal, el autorrelleno con el ISBN `9780140328721` y la carga
+de ese libro sin tapa, que guardó la de Open Library en `frontend/img/tapas/`. Lo que cargó la
+prueba se borró después.
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
