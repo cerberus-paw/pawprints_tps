@@ -1113,6 +1113,87 @@ En todos los casos la carga se ve escrita, tal cual.
 | Sesión | Consola, con la sesión del personal iniciada | `document.cookie` | Vacío: la cookie es `HttpOnly` |
 | CSP | Catálogo, desde la consola | Agregar un `<script>` y un `<img onerror>` a la página | No se ejecutan: la CSP los bloquea (sin la cabecera, los dos se ejecutan) |
 
+### 8. Microdata
+
+> Implementar las funcionalidades necesarias para que cada página tenga la microdata que corresponda.
+
+Las páginas públicas marcan con microdata de [schema.org](https://schema.org/) lo que muestran.
+Cada dato visible lleva su `itemprop` en el mismo elemento que lo muestra; lo que el buscador
+necesita y la página no escribe (la moneda, la disponibilidad o el horario en formato
+`Mo-Sa 09:00-20:00`) va en `<meta>` y `<link>`, y lo agregan las macros de
+[`macros/microdata.html.twig`](pawprints/backend/views/macros/microdata.html.twig), así un libro se
+marca igual en todos lados.
+
+| Página | Qué se marca | Dónde |
+| --- | --- | --- |
+| Ficha del libro (`/libros/{id}`) | `Book` con `name`, `author` (`Person`), `isbn`, `genre`, `bookFormat`, `image`, `description` y `offers` (`Offer` con `price`, `priceCurrency` = `ARS` y `availability` `InStock` u `OutOfStock` según el stock). Una `BreadcrumbList` (Inicio › Catálogo › libro) y los recomendados como `ItemList` | [`libro.html.twig`](pawprints/backend/views/libro.html.twig) |
+| Catálogo (`/catalogo`) | `ItemList` con un `ListItem` por libro de la página, con su `position` (en la página 2, el primero es el 5), y en cada uno un `Book` con su `Offer` | [`catalogo.html.twig`](pawprints/backend/views/catalogo.html.twig), [`tarjeta-libro.html.twig`](pawprints/backend/views/partials/tarjeta-libro.html.twig) |
+| Portada (`/`) | `ItemList` de las recomendaciones del librero y la tienda como `BookStore` (`name`, `description`, `address` con `PostalAddress`, `telephone`, `email`, `openingHours`, `image`) | [`inicio.html.twig`](pawprints/backend/views/inicio.html.twig), [`pie.html.twig`](pawprints/backend/views/partials/pie.html.twig) |
+| Sobre nosotros (`/sobre-nosotros`) | La tienda como `BookStore` | [`pie.html.twig`](pawprints/backend/views/partials/pie.html.twig) |
+| Reserva, páginas del personal y de error | Nada | — |
+
+Los datos de la tienda están en un solo lugar,
+[`Models/Tienda.php`](pawprints/backend/src/Models/Tienda.php): de ahí los toman el pie, «Sobre
+nosotros», la confirmación de la reserva, el correo al cliente y la microdata.
+
+#### a. ¿Toda la microdata es estática?
+
+> ¿Toda la microdata es estática?
+
+No. La de la **tienda** sí es fija: el nombre, la dirección, el teléfono y el horario no cambian
+de un pedido a otro, y salen de una constante. Pero la de los **libros** se arma en cada pedido con
+lo que hay en la base: el título, el precio, la tapa y sobre todo la disponibilidad, que pasa de
+`InStock` a `OutOfStock` cuando el stock llega a 0. También depende del pedido qué libros forman la
+`ItemList` del catálogo y en qué posición está cada uno, según la búsqueda, los filtros, el orden y
+la página. Por eso la microdata no puede escribirse a mano en el HTML: la generan las mismas
+plantillas de Twig que muestran los datos, y así nunca dice algo distinto de lo que se ve. Por la
+misma razón, las recomendaciones de la portada, que hasta el TP4 estaban escritas a mano con sus
+precios copiados, ahora salen de la base.
+
+#### b. ¿Cómo decidimos en qué página es importante la microdata de ciertos objetos?
+
+> ¿Cómo decidimos en qué página es importante la microdata de ciertos objetos? Por ejemplo, ¿En todos los sitios pondremos la microdata de la/s sucursal/es? En los listados de libros, ¿Que tipo de objetos son? ¿Son libros, son publicidades, que son?
+
+Cada página marca **de qué se trata**, que es lo que un buscador puede usar para mostrarla en sus
+resultados. La pregunta para cada objeto es si la página es la respuesta a una búsqueda sobre él.
+
+- **La sucursal no va en todas las páginas.** El pie muestra la dirección en todas, pero la tienda
+  se marca sólo en la portada y en «Sobre nosotros», que son las páginas que hablan de la librería:
+  la que tiene que aparecer si alguien busca «librería en Mercedes». En el catálogo o en una ficha
+  lo principal es el libro; repetir la misma tienda en todas las páginas no le agrega nada al
+  buscador y le resta claridad a lo que la página sí es. Si hubiera varias sucursales, cada una se
+  marcaría una vez, en la página que la presenta.
+- **En los listados, cada resultado es un libro**, no una publicidad ni un producto genérico: es
+  lo que la librería vende, con su precio y su disponibilidad. Por eso cada tarjeta es un `Book`
+  (más específico que `Product`) con su `Offer`, dentro de una `ItemList` que dice el orden. No hay
+  publicidad en el sitio; si la hubiera, no se marcaría como un libro del catálogo.
+- **La ficha es el libro** con su oferta: la página más importante para el buscador, y la única
+  que tiene todos los datos (ISBN, formato, descripción completa). Lleva además la miga de pan,
+  que el buscador muestra en lugar de la URL.
+- **Las páginas que no se buscan no se marcan**: la reserva, las del personal (piden ingresar) y
+  las de error no tienen nada que mostrar en un resultado de búsqueda.
+
+#### Decisiones
+
+- **Microdata y no JSON-LD**, porque es lo que pide la consigna. Tiene una ventaja: el dato marcado
+  es el mismo que se ve, así que no puede quedar desactualizado respecto de la página.
+- **El precio va en un `<meta>`** y no en el `<data value="15800">` que lo muestra. Según HTML, el
+  `itemprop` de un `<data>` toma su `value`, pero el validador de schema.org lee el texto
+  («$15.800»), que no es un precio.
+- **El `itemprop="name"` va en un `<span>` dentro del enlace**: puesto en un `<a>`, la microdata
+  toma el `href` y no el texto. Lo mismo con el teléfono y el correo del pie.
+- **La tarjeta vacía del `<template>` del catálogo no lleva microdata**: el contenido de un
+  `<template>` no es parte de la página, y los buscadores leen el listado que imprime el servidor
+  para cada URL, que es el mismo que arma el JS al filtrar.
+- **La miga de pan es visible**, no sólo microdata: los buscadores piden que lo marcado sea lo que
+  se ve, y además ayuda a volver al catálogo.
+
+#### Pruebas
+
+La portada, el catálogo (páginas 1 y 2), una búsqueda sin resultados, una ficha y «Sobre
+nosotros» pasan el [validador de schema.org](https://validator.schema.org/) sin errores ni avisos.
+Con el stock de un libro en 0, su ficha cambia `availability` a `OutOfStock`.
+
 ## Entorno de desarrollo
 
 | Componente | Versión |
