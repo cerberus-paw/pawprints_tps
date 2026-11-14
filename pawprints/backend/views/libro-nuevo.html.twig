@@ -92,10 +92,11 @@
           <div class="campo">
             <label for="isbn">ISBN <abbr title="campo obligatorio">*</abbr></label>
             {# data-regla="isbn": además del formato, validador.js controla el dígito verificador
-               con la regla que le registra la página (js/paginas/libro-nuevo.js). #}
+               con la regla que le registra la página (js/paginas/libro-nuevo.js).
+               data-autorrelleno: de dónde saca autorrelleno-isbn.js los datos de Open Library. #}
             <input type="text" id="isbn" name="isbn" value="{{ valores.isbn }}"
                    required pattern="{{ patronIsbn }}" inputmode="numeric"
-                   autocomplete="off" placeholder="978-987-1234-56-1" data-regla="isbn"{{ campos.atributos('isbn', errores, 'ayuda-isbn', enNavegador.isbn) }}>
+                   autocomplete="off" placeholder="978-987-1234-56-1" data-regla="isbn" data-autorrelleno="/libros/isbn/"{{ campos.atributos('isbn', errores, 'ayuda-isbn', enNavegador.isbn) }}>
             <small id="ayuda-isbn">Los 13 números del código de barras. Los guiones son opcionales.</small>
             {{ campos.error('isbn', errores, 'error-campo') }}
           </div>

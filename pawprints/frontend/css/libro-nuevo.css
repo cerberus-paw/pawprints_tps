@@ -261,6 +261,72 @@
   display: none;
 }
 
+/* La tapa sugerida por Open Library no tiene archivo que quitar: el
+   botón se oculta. Hace falta la regla porque el display de los botones
+   de componentes.css le gana al [hidden] del navegador. */
+.zona-arrastre-quitar[hidden] {
+  display: none;
+}
+
+/* ================================================================
+   AUTORRELLENO CON OPEN LIBRARY (TP5, consigna 7)
+   ================================================================ */
+.isbn-con-busqueda {
+  display: flex;
+  gap: var(--sp-3);
+  align-items: stretch;
+}
+
+.isbn-con-busqueda input {
+  flex: 1;
+  min-width: 0;
+}
+
+.isbn-con-busqueda button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.isbn-con-busqueda button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+/* Vacía no ocupa lugar, pero sigue en la página para que el lector de
+   pantalla anuncie lo que se escriba adentro. */
+.estado-autorrelleno {
+  font-size: var(--text-sm);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--v50);
+  border: 1px solid var(--border);
+  color: var(--dark);
+}
+
+.estado-autorrelleno:empty {
+  padding: 0;
+  border: 0;
+}
+
+.estado-autorrelleno[data-tipo="ok"] {
+  background: #EAF7EF;
+  border-color: #08B342;
+  color: #1E5631;
+}
+
+.estado-autorrelleno[data-tipo="error"] {
+  background: #FFF9E6;
+  border-color: #F1C40F;
+  color: #7D6608;
+}
+
+/* En el celular el botón va debajo del campo, a todo el ancho. */
+@media (max-width: 30rem) {
+  .isbn-con-busqueda {
+    flex-direction: column;
+  }
+}
+
 /* Vista previa de la tapa */
 .zona-arrastre-preview {
   display: flex;

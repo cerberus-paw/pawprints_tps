@@ -2,6 +2,7 @@
  * Carga de libros nuevos: validación en línea del formulario, con la regla del ISBN que HTML no
  * sabe controlar.
  */
+import { AutorrellenoIsbn } from '../componentes/autorrelleno-isbn.js';
 import { Validador } from '../componentes/validador.js';
 import { ZonaArrastre } from '../componentes/zona-arrastre.js';
 
@@ -21,7 +22,16 @@ function isbnValido(valor) {
 new Validador(document.querySelector('form[data-validar]')).regla('isbn', isbnValido);
 
 const contenedorTapa = document.querySelector('[data-zona-arrastre]');
-if (contenedorTapa) {
-  new ZonaArrastre(contenedorTapa);
+const zonaTapa = contenedorTapa ? new ZonaArrastre(contenedorTapa) : null;
+
+// Con el ISBN, el resto de los datos y la tapa salen de Open Library (TP5, consigna 7). Se busca
+// sólo un ISBN que pasaría la validación: el mismo pattern del campo y el dígito verificador.
+const campoIsbn = document.querySelector('[data-autorrelleno]');
+if (campoIsbn) {
+  const patron = new RegExp(`^(?:${campoIsbn.pattern})$`);
+  new AutorrellenoIsbn(campoIsbn, {
+    esValido: (valor) => patron.test(valor) && isbnValido(valor),
+    zonaTapa,
+  });
 }
 
