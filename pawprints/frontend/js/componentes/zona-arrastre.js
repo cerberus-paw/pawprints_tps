@@ -12,6 +12,8 @@
  * - Muestra errores en línea idénticos a validador.js con aria-invalid y aria-describedby.
  * - Vista previa con URL.createObjectURL() y botón para quitarla con revokeObjectURL().
  * - Sincroniza el archivo con DataTransfer para que viaje normalmente con el formulario.
+ * - Muestra una tapa sugerida (la de Open Library, TP5) mientras no se elige otra: es sólo la
+ *   vista previa, el input queda vacío y la tapa la busca el servidor al guardar.
  */
 
 const TIPOS_PERMITIDOS = ['image/jpeg', 'image/png', 'image/webp'];
@@ -50,6 +52,7 @@ export class ZonaArrastre {
     };
 
     this.urlVistaPrevia = null;
+    this.sugerida = null;
     this.sincronizando = false;
 
     this.armar();
@@ -299,9 +302,50 @@ export class ZonaArrastre {
     const tamanoKb = (archivo.size / 1024).toFixed(0);
     this.elTamano.textContent = `${tamanoKb} KB`;
 
+    this.elBotonQuitar.hidden = false;
     this.elContenido.hidden = true;
     this.elPreview.hidden = false;
+    this.zona.classList.remove('con-sugerida');
     this.zona.classList.add('con-preview', 'con-archivo');
+  }
+
+  /**
+   * Una tapa para mostrar mientras no se elija un archivo, como la de Open Library. No toca el
+   * input: si el formulario se manda así, la tapa la baja el servidor.
+   * @param {string} url
+   * @param {string} nombre
+   */
+  sugerir(url, nombre) {
+    this.sugerida = { url, nombre };
+    if (!this.input.files?.length) this.mostrarSugerida();
+  }
+
+  olvidarSugerida() {
+    this.sugerida = null;
+    if (!this.input.files?.length) this.ocultarVistaPrevia();
+  }
+
+  mostrarSugerida() {
+    this.elImg.src = this.sugerida.url;
+    this.elImg.alt = `Vista previa: ${this.sugerida.nombre}`;
+    this.elNombre.textContent = this.sugerida.nombre;
+    this.elTamano.textContent = 'Se guarda si no elegís otra. Hacé clic o arrastrá una imagen para cambiarla.';
+    // No hay archivo que quitar: para usar otra, se elige o se arrastra encima.
+    this.elBotonQuitar.hidden = true;
+    this.elContenido.hidden = true;
+    this.elPreview.hidden = false;
+    this.zona.classList.add('con-preview', 'con-sugerida');
+    this.zona.classList.remove('con-archivo');
+  }
+
+  ocultarVistaPrevia() {
+    this.elImg.removeAttribute('src');
+    this.elImg.alt = '';
+    this.elNombre.textContent = '';
+    this.elTamano.textContent = '';
+    this.elPreview.hidden = true;
+    this.elContenido.hidden = false;
+    this.zona.classList.remove('con-preview', 'con-archivo', 'con-sugerida');
   }
 
   /**
@@ -314,14 +358,9 @@ export class ZonaArrastre {
       this.urlVistaPrevia = null;
     }
 
-    this.elImg.src = '';
-    this.elImg.alt = '';
-    this.elNombre.textContent = '';
-    this.elTamano.textContent = '';
-
-    this.elPreview.hidden = true;
-    this.elContenido.hidden = false;
-    this.zona.classList.remove('con-preview', 'con-archivo');
+    // Sin archivo vuelve a verse la tapa sugerida, si había una.
+    if (this.sugerida) this.mostrarSugerida();
+    else this.ocultarVistaPrevia();
 
     this.input.value = '';
     try {
