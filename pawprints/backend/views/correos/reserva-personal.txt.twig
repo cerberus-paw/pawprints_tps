@@ -8,9 +8,11 @@
 {% block cuerpo %}
 Llegó la reserva #{{ numero }} desde el sitio.
 
-Libro:     {{ reserva.libro.titulo }} — {{ reserva.libro.autor }} (id {{ reserva.libro.id }})
-Cantidad:  {{ reserva.cantidad }}
-Precio:    {{ reserva.libro.precio|pesos }} c/u, {{ reserva.total()|pesos }} en total
+Libros:
+{% for r in reserva.renglones %}
+  {{ r.cantidad }} × {{ r.libro.titulo }} — {{ r.libro.autor }} (id {{ r.libro.id }}), {{ r.libro.precio|pesos }} c/u
+{% endfor %}
+Total:     {{ reserva.total()|pesos }} ({{ reserva.ejemplares() }} {{ reserva.ejemplares() == 1 ? 'ejemplar' : 'ejemplares' }})
 
 Nombre:    {{ reserva.nombre }}
 Correo:    {{ reserva.email }}

@@ -158,3 +158,12 @@
   color: #C0392B;
   font-weight: 600;
 }
+
+/* Los libros de una reserva (desde el carrito puede tener varios, TP5-11): uno por renglón, con
+   un poco de aire entre ellos. */
+.page-pedidos .libros-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 14rem;
+}

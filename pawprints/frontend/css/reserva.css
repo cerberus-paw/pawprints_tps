@@ -237,6 +237,21 @@
   background-size: 12px 8px;
 }
 
+/* Cada renglón de la reserva (TP5-11): el libro y su cantidad en una
+   fila. El tercer lugar es para el botón «Quitar» que agrega reserva.js. */
+.page-reserva main form fieldset > div[data-renglon] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem auto;
+  column-gap: var(--sp-4);
+  align-items: start;
+}
+
+.page-reserva main form div[data-renglon] > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
 /* La cantidad va acotada a 5: no necesita el ancho de la fila */
 .page-reserva main form input[type="number"] {
   max-width: 7rem;
@@ -296,50 +311,52 @@
   padding: 0;
   background: none;
   border-bottom: none;
+  display: block;
+}
 
+/* Hasta el carrito, la tarjeta mostraba un solo libro con su número
+   («Libro 1») en grande. Ahora es la lista de los elegidos: la tapa
+   chica a la izquierda y el título, el autor y la cuenta al lado. */
+.page-reserva main aside header ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.page-reserva main aside header li {
   display: grid;
-  grid-template-columns: auto 1fr;
-  column-gap: var(--sp-5);
-  row-gap: var(--sp-1);
+  grid-template-columns: 60px 1fr;
+  column-gap: var(--sp-4);
   align-items: center;
 }
 
-/* "Libro 1": número decorativo grande, ocupa la columna izquierda entera */
-.page-reserva main aside header > p:nth-of-type(1) {
-  grid-column: 1;
-  grid-row: 1 / 4;
-}
-
-.page-reserva main aside header > p:nth-of-type(1) strong {
-  font-family: var(--font-serif);
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  color: var(--v800);
-  line-height: 1.1;
+.page-reserva main aside header img {
+  width: 60px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  box-shadow: var(--sh-sm);
 }
 
 .page-reserva main aside header h3 {
-  grid-column: 2;
-  grid-row: 1;
   font-family: var(--font-serif);
   font-size: var(--text-lg);
   font-weight: 700;
+  line-height: 1.2;
 }
 
-.page-reserva main aside header > p:nth-of-type(2) {
-  grid-column: 2;
-  grid-row: 2;
+.page-reserva main aside header li p {
   font-size: var(--text-sm);
   color: var(--muted);
 }
 
-.page-reserva main aside header > p:nth-of-type(3) {
-  grid-column: 2;
-  grid-row: 3;
+.page-reserva main aside header > p {
+  margin-top: var(--sp-5);
+  text-align: right;
 }
 
-.page-reserva main aside header > p:nth-of-type(3) strong {
-  font-size: var(--text-base);
+.page-reserva main aside header > p strong {
+  font-size: var(--text-lg);
   font-weight: 700;
   color: var(--v700);
 }
@@ -354,13 +371,13 @@
 }
 
 /* Beneficios de reservar */
-.page-reserva main aside ul {
+.page-reserva main aside section ul {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
 }
 
-.page-reserva main aside li {
+.page-reserva main aside section li {
   position: relative;
   padding-left: var(--sp-6);
   font-size: var(--text-sm);
@@ -368,7 +385,7 @@
   line-height: 1.5;
 }
 
-.page-reserva main aside li::before {
+.page-reserva main aside section li::before {
   content: '✓';
   position: absolute;
   left: 0;
@@ -425,21 +442,14 @@
 }
 
 @media (max-width: 480px) {
-  /* La tarjeta del libro se apila: el número ya no comparte fila */
-  .page-reserva main aside header {
-    grid-template-columns: 1fr;
+  /* El libro ocupa la fila entera; la cantidad y «Quitar» van debajo. */
+  .page-reserva main form fieldset > div[data-renglon] {
+    grid-template-columns: 7rem auto;
+    row-gap: var(--sp-3);
   }
 
-  .page-reserva main aside header > p:nth-of-type(1),
-  .page-reserva main aside header h3,
-  .page-reserva main aside header > p:nth-of-type(2),
-  .page-reserva main aside header > p:nth-of-type(3) {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .page-reserva main form input[type="number"] {
-    max-width: 100%;
+  .page-reserva main form div[data-renglon] > div:first-child {
+    grid-column: 1 / -1;
   }
 }
 

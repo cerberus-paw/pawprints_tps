@@ -2,12 +2,13 @@
 {% extends 'base.html.twig' %}
 
 {% block contenido %}
-  <main>
+  {# Los libros que se acaban de reservar: carrito.js los saca del carrito (TP5-11). #}
+  <main data-reservados="{{ reservados|join(',') }}">
 
     <section aria-labelledby="titulo-confirmacion">
       <h1 id="titulo-confirmacion">¡Recibimos tu reserva!</h1>
       <p>
-        Te mandamos un correo con el detalle. Te guardamos el libro por 10 días
+        Te mandamos un correo con el detalle. Te guardamos los libros por 10 días
         hábiles, y lo pagás al retirarlo en nuestra tienda de Mercedes.
       </p>
       <p>
