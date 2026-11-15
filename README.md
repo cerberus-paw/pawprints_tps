@@ -1459,6 +1459,14 @@ lo que se ve mal. Lo que se corrigió:
   un parámetro que no existe, y mostraba el catálogo entero; ahora es `?genero=Ficción`.
 - **Sin textos de relleno en «Sobre nosotros».** La historia, los pilares («Pilar 1 / Descripción
   del Pilar 1…») y las indicaciones para llegar tenían el texto provisorio del maquetado.
+- **Una tapa propia para cada libro.** Había seis tapas, con el título impreso, para 30 libros: del
+  7 en adelante cada libro mostraba la de otro («Ángeles de Papel» salía con la de «El Laberinto
+  de los Vientos»). Las 24 que faltaban se compusieron con
+  [`diseño/tapas/componer-tapas.py`](diseño/tapas/componer-tapas.py), con el mismo diseño que las
+  seis originales y un fondo ilustrado según el género (créditos en
+  [`img/CREDITOS.md`](pawprints/frontend/img/CREDITOS.md)). `libros.sql` termina con un `UPDATE`
+  que corrige una base ya cargada: cambia sólo las que siguen con una tapa prestada, así que no
+  pisa la que se haya subido desde el sitio.
 
 ### Publicación
 
