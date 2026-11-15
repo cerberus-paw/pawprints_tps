@@ -10,7 +10,7 @@ Inverness— para que el interior, el salón y la entrada muestren el mismo edif
 `pawprints-icono.svg` no entra en esta tabla: es el ícono del manual de identidad de la
 cátedra, recortado de `diseño/PAWPrints OpcionVioleta.svg`.
 
-Las seis portadas se compusieron para este TP sobre esas fotos, agregándoles el título y el autor
+Las seis primeras portadas se compusieron para este TP sobre esas fotos, agregándoles el título y el autor
 con EB Garamond, la tipografía del sitio. Los libros y sus autores son ficticios, así que ninguna
 portada reproduce la tapa de un libro real.
 
@@ -26,3 +26,7 @@ portada reproduce la tapa de un libro real.
 | `libro-4.jpg` | Portada de *Ecos del Cosmos* | [The hidden fires of the Flame Nebula](https://commons.wikimedia.org/wiki/File%3AThe_hidden_fires_of_the_Flame_Nebula.jpg) | ESO/J. Emerson/VISTA. Acknowledgment: Cambridge Astronomical Survey Unit | CC BY 4.0 |
 | `libro-5.jpg` | Portada de *Crónicas del Tiempo Olvidado* | [Angkor Sunrise Silhouette](https://commons.wikimedia.org/wiki/File%3AAngkor_Sunrise_Silhouette.JPG) | User: (WT-shared) Jpatokal at wts wikivoyage | CC BY-SA 4.0 |
 | `libro-6.jpg` | Portada de *La Arquitectura de la Mente* | [Vatican Museums Spiral Staircase Looking Up 2012](https://commons.wikimedia.org/wiki/File%3AVatican_Museums_Spiral_Staircase_Looking_Up_2012.jpg) | Colin | CC BY-SA 3.0 |
+
+Las portadas de los libros 7 a 30 (`libro-7.jpg` a `libro-30.jpg`) no usan fotografías: son
+ilustraciones generadas con [`diseño/tapas/componer-tapas.py`](../../../diseño/tapas/componer-tapas.py),
+con el mismo diseño y la misma tipografía (EB Garamond, licencia OFL) que las seis de la tabla.
