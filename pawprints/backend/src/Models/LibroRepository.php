@@ -48,9 +48,13 @@ final class LibroRepository implements CatalogoDeLibros
      * número libre: así un pedido no puede traerse el catálogo entero de una vez, y el desplegable
      * de la vista ofrece estas mismas opciones y no otras.
      *
+     * Son múltiplos de 6 porque la grilla del catálogo tiene 1, 2 o 3 columnas según el ancho (y
+     * 12 y 24 también llenan 4): hasta el TP5 eran 4, 8, 12 y 24, y con 4 en tres columnas el
+     * cuarto libro quedaba solo en su fila.
+     *
      * @var list<int>
      */
-    public const CANTIDADES = [4, 8, 12, 24];
+    public const CANTIDADES = [6, 12, 24];
 
     /** Cuántos libros entran en una página del catálogo si no se pide otra cantidad. */
     public const POR_PAGINA = self::CANTIDADES[0];

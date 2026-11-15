@@ -29,7 +29,7 @@ const ORDENES = [
 ];
 
 /** Los mismos de LibroRepository::CANTIDADES; el primero es el de por defecto. */
-const CANTIDADES = [4, 8, 12, 24];
+const CANTIDADES = [6, 12, 24];
 
 const ORDEN_POR_DEFECTO = 'recomendados';
 
