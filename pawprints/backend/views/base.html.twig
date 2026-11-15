@@ -39,6 +39,7 @@
      y cuando corren el HTML ya está entero. #}
   {% block js %}
   <script type="module" src="/js/componentes/historial-busquedas.js"></script>
+  <script type="module" src="/js/componentes/carrito.js"></script>
   {% for modulo in extraJs ?? [] %}
     <script type="module" src="/js/{{ modulo }}"></script>
   {% endfor %}

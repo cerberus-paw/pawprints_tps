@@ -162,6 +162,8 @@ class CatalogoController extends Controller
                 'isbn' => $libro['isbn'],
                 'formato' => $libro['formato'],
                 'precio' => $libro['precio'],
+                // Para el «Agregar al carrito» de las tarjetas que redibuja el filtro (TP5-11).
+                'stock' => $libro['stock'],
                 'resumen' => $libro['resumen'],
                 'imagen' => $libro['imagen'],
             ],

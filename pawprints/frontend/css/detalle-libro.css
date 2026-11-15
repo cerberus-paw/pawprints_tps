@@ -225,8 +225,9 @@
   flex-wrap: wrap;
 }
 
-/* Botón principal: "Agregar al carrito" */
-.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href="#carrito"] {
+/* Botón principal: "Agregar al carrito" (desde TP5-11 es un enlace a la
+   reserva que carrito.js convierte en botón: se lo reconoce por su data-*). */
+.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[data-carrito-agregar] {
   flex: 1;
   min-width: 180px;
   display: inline-flex;
@@ -242,14 +243,14 @@
   transition: background var(--ease), border-color var(--ease), box-shadow var(--ease);
 }
 
-.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href="#carrito"]:hover {
+.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[data-carrito-agregar]:hover {
   background: var(--v600);
   border-color: var(--v600);
   box-shadow: var(--sh-md);
 }
 
 /* Botón secundario: "Reservar en tienda" */
-.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="/reserva"] {
+.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="/reserva"]:not([data-carrito-agregar]) {
   flex: 1;
   min-width: 180px;
   display: inline-flex;
@@ -265,7 +266,7 @@
   transition: background var(--ease), color var(--ease), box-shadow var(--ease);
 }
 
-.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="/reserva"]:hover {
+.page-detalle-libro section[aria-labelledby="titulo-comprar-reservar"] a[href^="/reserva"]:not([data-carrito-agregar]):hover {
   background: var(--v50);
   box-shadow: var(--sh-sm);
 }

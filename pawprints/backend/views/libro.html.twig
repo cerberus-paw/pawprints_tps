@@ -11,6 +11,7 @@
 #}
 {% extends 'base.html.twig' %}
 {% import 'macros/microdata.html.twig' as microdata %}
+{% import 'macros/carrito.html.twig' as carrito %}
 
 {% block contenido %}
   <main>
@@ -66,9 +67,10 @@
           <mark>{{ libro.stock > 0 ? 'EN STOCK' : 'SIN STOCK' }}</mark>
         </p>
 
+        {# Sin stock no se puede agregar ni reservar. #}
         <p>
-          <a href="#carrito">Agregar al carrito</a>
           {% if libro.stock > 0 %}
+          {{ carrito.agregar(libro) }}
           {# El formulario de reserva lo recibe en el desplegable ya elegido. #}
           <a href="/reserva?libro={{ libro.id }}">Reservar en tienda</a>
           {% endif %}
