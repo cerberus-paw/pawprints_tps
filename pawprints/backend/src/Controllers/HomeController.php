@@ -7,6 +7,7 @@ namespace PawPrints\Controllers;
 use PawPrints\Core\Controller;
 use PawPrints\Core\Request;
 use PawPrints\Core\Response;
+use PawPrints\Models\Agenda;
 use PawPrints\Models\LibroRepository;
 
 /**
@@ -41,6 +42,7 @@ class HomeController extends Controller
             'extraCss' => ['inicio.css', 'carrusel.css'],
             'extraJs' => ['paginas/inicio.js'],
             'recomendados' => $recomendados,
+            'eventos' => Agenda::proximas(),
         ]);
     }
 }
