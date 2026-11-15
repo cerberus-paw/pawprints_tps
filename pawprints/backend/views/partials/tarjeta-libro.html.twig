@@ -24,6 +24,7 @@
   imprime el servidor, que es el mismo que arma el JS para esa URL.
 #}
 {% import 'macros/microdata.html.twig' as microdata %}
+{% import 'macros/carrito.html.twig' as carrito %}
 {% set nivel = nivel ?? 4 %}
 {% set ficha = libro ? '/libros/' ~ libro.id : '' %}
 {% set md = libro is not null %}
@@ -55,6 +56,9 @@
               <p{% if md %} itemprop="offers" itemscope itemtype="https://schema.org/Offer"{% endif %}>
                 {%- if md %}{{ microdata.oferta(libro) }}{% endif -%}
                 <strong>Precio:</strong> <data value="{{ libro.precio ?? '' }}">{{ libro ? libro.precio|pesos : '' }}</data></p>
-              <p><a href="{{ ficha }}">Ver detalles &rarr;</a></p>
+              {# «Agregar al carrito» (TP5-11) va en el mismo párrafo que «Ver detalles»: el CSS
+                 de las tarjetas se cuelga del orden de los <p>. Sin stock no aparece; en la tarjeta
+                 del <template> está siempre y filtros-catalogo.js la oculta. #}
+              <p><a href="{{ ficha }}">Ver detalles &rarr;</a>{% if libro is null or libro.stock > 0 %} {{ carrito.agregar(libro) }}{% endif %}</p>
             </article>
           </li>

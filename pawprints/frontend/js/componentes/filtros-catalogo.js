@@ -424,8 +424,23 @@ export class FiltrosCatalogo {
     for (const campo of tarjeta.querySelectorAll('[data-campo]')) {
       campo.textContent = libro[campo.dataset.campo];
     }
-    for (const enlace of tarjeta.querySelectorAll('a')) {
+    for (const enlace of tarjeta.querySelectorAll('a:not([data-carrito-agregar])')) {
       enlace.href = `/libros/${libro.id}`;
+    }
+    // El «Agregar al carrito» (TP5-11) lleva el libro en sus data-*, como el que imprime el
+    // servidor; sin stock no se muestra.
+    const agregar = tarjeta.querySelector('[data-carrito-agregar]');
+    if (agregar) {
+      agregar.href = `/reserva?libro=${libro.id}`;
+      Object.assign(agregar.dataset, {
+        libroId: String(libro.id),
+        titulo: libro.titulo,
+        autor: libro.autor,
+        precio: String(libro.precio),
+        imagen: libro.imagen,
+        stock: String(libro.stock ?? ''),
+      });
+      agregar.hidden = libro.stock === 0;
     }
     const imagen = tarjeta.querySelector('img');
     imagen.src = `/img/${libro.imagen}`;

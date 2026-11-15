@@ -1,0 +1,15 @@
+{#
+  El «Agregar al carrito» de un libro (TP5-11), igual en la ficha y en cada tarjeta:
+
+    {% import 'macros/carrito.html.twig' as carrito %}
+    {{ carrito.agregar(libro) }}
+
+  Es un enlace a /reserva?libro=N: sin JavaScript, reserva ese libro solo. Con JavaScript,
+  carrito.js toma el clic y agrega el libro con los datos de sus data-*, sin pedirle nada al
+  servidor. Con libro en null sale vacío, para la tarjeta del <template> del catálogo, que
+  completa filtros-catalogo.js.
+#}
+{% macro agregar(libro, texto = 'Agregar al carrito') %}
+  {%- set id = libro.id ?? '' -%}
+  <a href="/reserva?libro={{ id }}" data-carrito-agregar data-libro-id="{{ id }}" data-titulo="{{ libro.titulo ?? '' }}" data-autor="{{ libro.autor ?? '' }}" data-precio="{{ libro.precio ?? '' }}" data-imagen="{{ libro.imagen ?? '' }}" data-stock="{{ libro.stock ?? '' }}">{{ texto }}</a>
+{%- endmacro %}
