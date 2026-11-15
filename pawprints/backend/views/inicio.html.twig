@@ -89,27 +89,23 @@
           Durante todo el mes, llevás dos títulos de narrativa argentina
           al precio de uno. Válido en la tienda física y en la tienda en línea.
         </p>
-        <p><a href="/catalogo?categoria=ficcion">Ver sección &rarr;</a></p>
+        {# El filtro es por género (el parámetro «categoria» no existe y llevaba al catálogo entero). #}
+        <p><a href="/catalogo?genero={{ 'Ficción'|url_encode }}">Ver sección &rarr;</a></p>
       </article>
 
       <ul>
+        {# La fecha la calcula Models/Agenda con la regla de cada actividad: escrita a mano,
+           quedaba vencida. #}
+        {% for evento in eventos %}
         <li>
           <article>
-            <p><time datetime="2026-09-18T19:00">Jueves 18 de septiembre, 19:00 h</time></p>
-            <h3>Club de lectura: literatura latinoamericana</h3>
-            <p>Encuentro mensual abierto a la comunidad, moderado por un escritor invitado.</p>
+            <p><time datetime="{{ evento.fecha|date('Y-m-d\\TH:i') }}">{{ evento.cuando }}</time></p>
+            <h3>{{ evento.titulo }}</h3>
+            <p>{{ evento.texto }}</p>
             <p><a href="/sobre-nosotros">Saber más &rarr;</a></p>
           </article>
         </li>
-
-        <li>
-          <article>
-            <p><time datetime="2026-09-27T17:30">Sábado 27 de septiembre, 17:30 h</time></p>
-            <h3>Taller de escritura creativa</h3>
-            <p>Clase abierta de redacción creativa para todas las edades. Cupos limitados.</p>
-            <p><a href="/sobre-nosotros">Saber más &rarr;</a></p>
-          </article>
-        </li>
+        {% endfor %}
       </ul>
     </section>
 

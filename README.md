@@ -1449,6 +1449,16 @@ lo que se ve mal. Lo que se corrigió:
   (TP3). La grilla tiene 1, 2 o 3 columnas según el ancho, y con 4 por página el cuarto libro
   quedaba solo en su fila. Los múltiplos de 6 llenan las tres grillas (y 12 y 24, también una de
   4). Están en `LibroRepository::CANTIDADES` y en `filtros-catalogo.js`.
+- **Los eventos de la portada se calculan.** Tenían las fechas escritas a mano («Jueves 18 de
+  septiembre»), vencidas y con el día de la semana mal (el 18/09/2026 fue viernes). Como las
+  actividades se repiten con una regla fija (el club de lectura, el último jueves de cada mes; el
+  taller, el primer sábado), [`Agenda`](pawprints/backend/src/Models/Agenda.php) calcula el próximo
+  encuentro de cada una y la portada nunca anuncia algo que ya pasó. Los nombres de los días y los
+  meses van en la clase para no depender de la extensión `intl` ni del locale del servidor.
+- **«Ver sección» de la promoción lleva a la ficción.** Apuntaba a `/catalogo?categoria=ficcion`,
+  un parámetro que no existe, y mostraba el catálogo entero; ahora es `?genero=Ficción`.
+- **Sin textos de relleno en «Sobre nosotros».** La historia, los pilares («Pilar 1 / Descripción
+  del Pilar 1…») y las indicaciones para llegar tenían el texto provisorio del maquetado.
 
 ### Publicación
 
