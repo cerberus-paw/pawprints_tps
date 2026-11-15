@@ -10,7 +10,12 @@
 {% block cuerpo %}
 Hola, {{ reserva.nombre }}:
 
-Recibimos tu reserva de {{ reserva.cantidad == 1 ? 'un ejemplar' : reserva.cantidad ~ ' ejemplares' }} de «{{ reserva.libro.titulo }}», de {{ reserva.libro.autor }}.
+Recibimos tu reserva de:
+{% for r in reserva.renglones %}
+  {{ r.cantidad == 1 ? 'Un ejemplar' : r.cantidad ~ ' ejemplares' }} de «{{ r.libro.titulo }}», de {{ r.libro.autor }} ({{ r.libro.precio|pesos }} c/u)
+{% endfor %}
+Total: {{ reserva.total()|pesos }}
+
 Es la número {{ numero }}: si nos escribís por ella, mencionala.
 
 La reserva queda guardada por 10 días hábiles, y se paga al retirarla en la tienda:

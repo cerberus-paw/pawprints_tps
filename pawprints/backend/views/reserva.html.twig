@@ -1,12 +1,21 @@
 {#
   El formulario de reserva (TP3, punto 5; Mateo), que guarda la reserva y avisa al personal.
 
+  Desde el carrito (TP5-11) puede tener varios libros: un renglón por libro, con su desplegable
+  (libro_id[]) y su cantidad (cantidad[]). Sin JavaScript llega con los renglones que pidió la
+  dirección; reserva.js agrega y quita renglones y mantiene la tarjeta de resumen al día.
+
   Variables (ReservaController::mostrar):
-    libros        — los del desplegable: id, titulo, autor y precio
-    libro         — el de la tarjeta de resumen, o null
+    libros        — los de los desplegables: id, titulo, autor, precio, stock e imagen
+    renglones     — los elegidos, cada uno con libro_id y cantidad como texto; al menos uno
+    elegidos      — los de la tarjeta de resumen: los renglones con un libro que existe, con el
+                    libro, la cantidad y el subtotal
+    total         — la suma de los subtotales, en pesos
     valores       — lo que ya escribió el usuario, para no hacérselo escribir de nuevo
-    errores       — campo => mensaje; «envio» si no se pudo guardar
-    maxEjemplares — el tope de la cantidad
+    errores       — campo => mensaje; los de cada renglón van con el id de su control
+                    («libro-0», «cantidad-1»), y «envio» si no se pudo guardar
+    maxEjemplares — el tope de ejemplares de cada libro
+    maxLibros     — el tope de libros distintos
     trampa        — el nombre del campo trampa para bots
 #}
 {% extends 'base.html.twig' %}
@@ -14,7 +23,7 @@
 
 {% block contenido %}
 {# El id del control de cada campo, para que el resumen de errores enlace a él. #}
-{% set controles = {libro_id: 'libro'} %}
+{% set controles = {libros: 'libro-0'} %}
   <main>
 
     <section aria-labelledby="titulo-reserva">
@@ -78,28 +87,36 @@
             </div>
           </fieldset>
 
-          <fieldset>
-            <legend>Datos del libro</legend>
+          <fieldset data-renglones data-max-libros="{{ maxLibros }}">
+            <legend>Libros a reservar</legend>
 
-            <div>
-              <label for="libro">Seleccioná el libro a reservar <abbr title="campo obligatorio">*</abbr></label>
-              {# Lista cerrada armada desde el catálogo: el value es el id del libro. #}
-              <select id="libro" name="libro_id" required{{ campos.atributos('libro_id', errores) }}>
-                <option value="" disabled{% if libro is null %} selected{% endif %}>— Seleccioná un libro —</option>
-                {% for opcion in libros %}
-                <option value="{{ opcion.id }}"{% if opcion.id is same as(libro.id ?? null) %} selected{% endif %}>{{ opcion.titulo }} — {{ opcion.autor }}</option>
-                {% endfor %}
-              </select>
-              {{ campos.error('libro_id', errores) }}
-            </div>
+            {% for renglon in renglones %}
+            {% set i = loop.index0 %}
+            <div data-renglon>
+              <div>
+                <label for="libro-{{ i }}">{{ loop.length > 1 ? 'Libro ' ~ loop.index : 'Seleccioná el libro a reservar' }} <abbr title="campo obligatorio">*</abbr></label>
+                {# Lista cerrada armada desde el catálogo: el value es el id del libro. Los data-*
+                   son para que reserva.js arme la tarjeta de resumen sin pedirle nada al servidor. #}
+                <select id="libro-{{ i }}" name="libro_id[]" required{{ campos.atributos('libro-' ~ i, errores) }}>
+                  <option value="" disabled{% if renglon.libro_id == '' %} selected{% endif %}>— Seleccioná un libro —</option>
+                  {% for opcion in libros %}
+                  <option value="{{ opcion.id }}" data-precio="{{ opcion.precio }}" data-stock="{{ opcion.stock }}" data-imagen="{{ opcion.imagen }}" data-autor="{{ opcion.autor }}" data-titulo="{{ opcion.titulo }}"{% if (opcion.id ~ '') is same as(renglon.libro_id) %} selected{% endif %}{% if opcion.stock == 0 %} disabled{% endif %}>{{ opcion.titulo }} — {{ opcion.autor }}{% if opcion.stock == 0 %} (sin stock){% endif %}</option>
+                  {% endfor %}
+                </select>
+                {{ campos.error('libro-' ~ i, errores) }}
+              </div>
 
-            <div>
-              <label for="cantidad">Cantidad <abbr title="campo obligatorio">*</abbr></label>
-              <input type="number" id="cantidad" name="cantidad" value="{{ valores.cantidad }}"
-                     min="1" max="{{ maxEjemplares }}" required{{ campos.atributos('cantidad', errores) }}>
-              {{ campos.error('cantidad', errores) }}
-              <small>Máximo {{ maxEjemplares }} ejemplares por reserva.</small>
+              <div>
+                <label for="cantidad-{{ i }}">Cantidad <abbr title="campo obligatorio">*</abbr></label>
+                <input type="number" id="cantidad-{{ i }}" name="cantidad[]" value="{{ renglon.cantidad }}"
+                       min="1" max="{{ maxEjemplares }}" required{{ campos.atributos('cantidad-' ~ i, errores) }}>
+                {{ campos.error('cantidad-' ~ i, errores) }}
+              </div>
             </div>
+            {% endfor %}
+
+            {{ campos.error('libros', errores) }}
+            <small>Hasta {{ maxEjemplares }} ejemplares de cada libro y {{ maxLibros }} libros distintos por reserva.</small>
           </fieldset>
 
           <fieldset>
@@ -128,26 +145,32 @@
       </article>
 
       <aside aria-labelledby="titulo-resumen-libro">
-        <h2 id="titulo-resumen-libro" hidden>Resumen del libro</h2>
+        <h2 id="titulo-resumen-libro" hidden>Resumen de la reserva</h2>
 
-        {# Sin JavaScript la tarjeta no sigue al desplegable: muestra el libro con el que se llegó
-           (desde su detalle) o el que se eligió antes de un error. El TP4 la actualiza. #}
-        <article{% if libro %} aria-labelledby="nombre-libro-resumen"{% endif %}>
-          {% if libro %}
-          <header>
-            <p><strong>Libro {{ libro.id }}</strong></p>
-            <h3 id="nombre-libro-resumen">{{ libro.titulo }}</h3>
-            <p>{{ libro.autor }}</p>
-            <p><strong><data value="{{ libro.precio }}">{{ libro.precio|pesos }}</data></strong></p>
+        {# Sin JavaScript la tarjeta muestra los libros con los que se llegó (de la ficha o del
+           carrito) o los que se eligieron antes de un error; reserva.js la sigue al día. #}
+        <article aria-labelledby="titulo-resumen-libro">
+          <header data-resumen{% if elegidos is empty %} hidden{% endif %}>
+            <ul>
+              {% for elegido in elegidos %}
+              <li>
+                <img src="/img/{{ elegido.libro.imagen }}" alt="" width="60" height="80">
+                <div>
+                  <h3>{{ elegido.libro.titulo }}</h3>
+                  <p>{{ elegido.libro.autor }}</p>
+                  <p>{{ elegido.cantidad }} × <data value="{{ elegido.libro.precio }}">{{ elegido.libro.precio|pesos }}</data></p>
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+            <p><strong>Total: <data value="{{ total }}">{{ total|pesos }}</data></strong></p>
+            <hr>
           </header>
-
-          <hr>
-          {% endif %}
 
           <section aria-labelledby="titulo-beneficios">
             <h3 id="titulo-beneficios" hidden>Beneficios de reservar en tienda</h3>
             <ul>
-              <li>Te guardamos el libro por 10 días hábiles.</li>
+              <li>Te guardamos los libros por 10 días hábiles.</li>
               <li>Te llega un correo con el detalle de la reserva.</li>
               <li>Pago directo al retirarlo en la tienda física.</li>
             </ul>

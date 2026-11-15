@@ -57,10 +57,6 @@ CREATE TABLE IF NOT EXISTS libros (
 -- Cada reserva hecha desde el sitio, que antes sólo llegaba por correo.
 CREATE TABLE IF NOT EXISTS reservas (
     id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    -- RESTRICT: un libro con reservas no se puede borrar, para que el listado del personal nunca
-    -- muestre un pedido sin su libro.
-    libro_id INT UNSIGNED NOT NULL,
-    cantidad TINYINT UNSIGNED NOT NULL,
     nombre VARCHAR(100) NOT NULL,
     correo VARCHAR(254) NOT NULL,
     telefono VARCHAR(20) NOT NULL,
@@ -69,11 +65,51 @@ CREATE TABLE IF NOT EXISTS reservas (
     aviso_enviado BOOLEAN NOT NULL DEFAULT FALSE,
     creada DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    CONSTRAINT reservas_libro FOREIGN KEY (libro_id) REFERENCES libros (id)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
     -- El listado del personal va de la más nueva a la más vieja.
     KEY reservas_creada (creada)
 ) ENGINE = InnoDB;
+
+-- Los libros de cada reserva (TP5-11, el carrito): uno por renglón, con su cantidad. Hasta
+-- entonces la reserva era de un solo libro y lo tenía en reservas.libro_id y reservas.cantidad.
+CREATE TABLE IF NOT EXISTS reserva_libros (
+    reserva_id INT UNSIGNED NOT NULL,
+    libro_id INT UNSIGNED NOT NULL,
+    cantidad TINYINT UNSIGNED NOT NULL,
+    -- El precio de cada ejemplar cuando se hizo la reserva, que es el que se le informó al cliente
+    -- en el correo: si después el libro cambia de precio, la reserva no cambia.
+    precio INT UNSIGNED NOT NULL,
+    -- Un libro va una sola vez por reserva: si se quieren más ejemplares, sube la cantidad.
+    PRIMARY KEY (reserva_id, libro_id),
+    CONSTRAINT reserva_libros_reserva FOREIGN KEY (reserva_id) REFERENCES reservas (id)
+        ON DELETE CASCADE,
+    -- RESTRICT: un libro con reservas no se puede borrar, para que el listado del personal nunca
+    -- muestre un pedido sin su libro.
+    CONSTRAINT reserva_libros_libro FOREIGN KEY (libro_id) REFERENCES libros (id)
+        ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE = InnoDB;
+
+-- Una base creada antes del carrito tiene el libro en la reserva. Se pasa cada una a
+-- reserva_libros, con el precio actual del libro (el de ese momento no se guardaba), y recién
+-- después se borran las columnas viejas. MySQL no tiene «DROP COLUMN IF EXISTS»: se pregunta a
+-- information_schema y, si ya no están, se ejecuta un DO 0 que no hace nada. Así el script se
+-- puede seguir corriendo las veces que haga falta.
+SET @reservas_viejas = (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = 'pawprints' AND table_name = 'reservas' AND column_name = 'libro_id'
+);
+SET @sql = IF(@reservas_viejas > 0,
+    'INSERT IGNORE INTO reserva_libros (reserva_id, libro_id, cantidad, precio)
+         SELECT r.id, r.libro_id, r.cantidad, l.precio FROM reservas r JOIN libros l ON l.id = r.libro_id',
+    'DO 0');
+PREPARE paso FROM @sql;
+EXECUTE paso;
+DEALLOCATE PREPARE paso;
+SET @sql = IF(@reservas_viejas > 0,
+    'ALTER TABLE reservas DROP FOREIGN KEY reservas_libro, DROP COLUMN libro_id, DROP COLUMN cantidad',
+    'DO 0');
+PREPARE paso FROM @sql;
+EXECUTE paso;
+DEALLOCATE PREPARE paso;
 
 -- Quienes atienden la librería y entran a ver los pedidos. Se dan de alta con
 -- bin/crear-personal.php: no hay registro público.
@@ -100,12 +136,15 @@ CREATE TABLE IF NOT EXISTS personal (
 REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.* FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
 REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.libros FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
 REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.reservas FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.reserva_libros FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
 REVOKE IF EXISTS ALL PRIVILEGES ON pawprints.personal FROM 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
 
 -- El catálogo se lee y el personal carga libros nuevos.
 GRANT SELECT, INSERT ON pawprints.libros TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
 -- Las reservas se guardan, se listan y se marcan con el aviso enviado.
 GRANT SELECT, INSERT, UPDATE ON pawprints.reservas TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
+-- Sus libros se guardan junto con la reserva y se listan; no se cambian.
+GRANT SELECT, INSERT ON pawprints.reserva_libros TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';
 -- El ingreso lee el personal y actualiza el hash viejo; bin/crear-personal.php da de alta
 -- usuarios y les cambia la contraseña.
 GRANT SELECT, INSERT, UPDATE ON pawprints.personal TO 'pawprints'@'localhost', 'pawprints'@'127.0.0.1';

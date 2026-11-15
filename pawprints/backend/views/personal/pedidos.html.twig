@@ -1,6 +1,7 @@
 {#
   Listado de pedidos para el personal (TP5, consigna 3). Variables:
-    pedidos         — las reservas de esta página, como las devuelve ReservaRepository::listar()
+    pedidos         — las reservas de esta página, como las devuelve ReservaRepository::listar():
+                      cada una con sus libros (desde el carrito, puede tener varios) y el total
     total           — cuántas hay en total
     pagina, paginas — para el paginado
 #}
@@ -28,8 +29,8 @@
               <tr>
                 <th scope="col">N.º</th>
                 <th scope="col">Fecha</th>
-                <th scope="col">Libro</th>
-                <th scope="col">Cant.</th>
+                <th scope="col">Libros</th>
+                <th scope="col">Total</th>
                 <th scope="col">Cliente</th>
                 <th scope="col">Comentarios</th>
                 <th scope="col">Aviso</th>
@@ -40,8 +41,14 @@
                 <tr>
                   <th scope="row">{{ p.id }}</th>
                   <td><time datetime="{{ p.creada|date('Y-m-d\\TH:i') }}">{{ p.creada|date('d/m/Y H:i') }}</time></td>
-                  <td><a href="/libros/{{ p.libro_id }}">{{ p.titulo }}</a><br><small>{{ p.autor }}</small></td>
-                  <td>{{ p.cantidad }}</td>
+                  <td>
+                    <ul class="libros-pedido">
+                      {% for l in p.libros %}
+                      <li>{{ l.cantidad }} × <a href="/libros/{{ l.libro_id }}">{{ l.titulo }}</a><br><small>{{ l.autor }} · {{ l.precio|pesos }} c/u</small></li>
+                      {% endfor %}
+                    </ul>
+                  </td>
+                  <td><data value="{{ p.total }}">{{ p.total|pesos }}</data></td>
                   <td>
                     {{ p.nombre }}<br>
                     <a href="mailto:{{ p.correo }}">{{ p.correo }}</a><br>

@@ -75,6 +75,28 @@ final class Request
     }
 
     /**
+     * Un campo del cuerpo que llega como arreglo («libro_id[]=3&libro_id[]=7»): los renglones de
+     * la reserva del carrito. Sólo los valores de texto de un nivel; si llegó un texto suelto o
+     * algo anidado, se descarta igual que input() descarta un arreglo.
+     *
+     * @return array<int|string, string>
+     */
+    public function inputArray(string $key): array
+    {
+        return self::strings($this->body, $key);
+    }
+
+    /**
+     * Lo mismo para la query: «/reserva?libros[3]=2&libros[7]=1», el carrito que llega a la reserva.
+     *
+     * @return array<int|string, string>
+     */
+    public function queryArray(string $key): array
+    {
+        return self::strings($this->query, $key);
+    }
+
+    /**
      * Un archivo subido ($_FILES): su array con 'name', 'type', 'tmp_name', 'error', 'size',
      * o null si no se envió nada en ese campo.
      *
@@ -125,6 +147,18 @@ final class Request
         $value = $values[$key] ?? null;
 
         return is_string($value) ? $value : null;
+    }
+
+    /**
+     * @param array<string, mixed> $values
+     *
+     * @return array<int|string, string>
+     */
+    private static function strings(array $values, string $key): array
+    {
+        $value = $values[$key] ?? null;
+
+        return is_array($value) ? array_filter($value, 'is_string') : [];
     }
 
     private static function normalize(string $path): string
