@@ -381,7 +381,7 @@ cambian:
 | Formato | `formato` | Tapa dura, tapa blanda o digital |
 | Rango de precio | `precio_desde`, `precio_hasta` | Montos en pesos, inclusivos. Vacío es «sin límite»; si el mínimo supera al máximo, el filtro no se aplica |
 | Ordenar por | `orden` | `recomendados` (el orden del catálogo), y `titulo`, `autor` o `precio` con `-asc` o `-desc` |
-| Libros por página | `por_pagina` | `4` (la de por defecto), `8`, `12` o `24`. Cualquier otro valor cae en la de por defecto |
+| Libros por página | `por_pagina` | `4` (la de por defecto), `8`, `12` o `24`. Cualquier otro valor cae en la de por defecto. Desde el TP5 son `6`, `12` y `24` ([por qué](#revisión-de-las-vistas)) |
 | Paginado | `pagina` | Desde 1. Cuántas hay depende de `por_pagina` |
 
 **Lo que no existe.** Un libro cuyo id no está en el catálogo, un id que no es un número y una
@@ -1195,7 +1195,7 @@ seguían ahí.
 | Buscador del catálogo | `baez' AND SLEEP(5) -- ` | 0 libros, respuesta en 27 ms: el `SLEEP` no se ejecutó |
 | CSV y JSON del catálogo | `?q=' OR '1'='1` | 0 filas y una lista vacía |
 | Orden | `?orden=titulo;DROP` y `?orden=titulo-asc, (SELECT SLEEP(5))` | El orden por defecto, como un orden desconocido |
-| Libros por página | `?por_pagina=1;DROP TABLE libros` | La cantidad por defecto (24) |
+| Libros por página | `?por_pagina=1;DROP TABLE libros` | La cantidad por defecto (6) |
 | Página | `?pagina=1 OR 1` | 404: no es un número de página |
 | Filtro de género | `?genero=' OR '1'='1` | 0 libros: no hay un género con ese nombre |
 | Filtro de precio | `?precio_desde=0 OR 1=1` | Sin límite de precio, como un monto inválido |
@@ -1438,6 +1438,17 @@ resultados. La pregunta para cada objeto es si la página es la respuesta a una 
   vocabulario de schema.org (que cada tipo exista, que admita cada propiedad y que los valores de
   enumeraciones existan): sin errores.
 - Con el stock de un libro en 0, su ficha cambia `availability` a `OutOfStock`.
+
+### Revisión de las vistas
+
+Antes de cerrar el TP5 se recorrieron todas las páginas en escritorio (1366 px) y en un celular
+(390 px), con y sin sesión del personal, buscando errores de consola, desbordes horizontales y
+lo que se ve mal. Lo que se corrigió:
+
+- **Libros por página: 6, 12 o 24.** Eran 4, 8, 12 y 24, de cuando el catálogo tenía seis libros
+  (TP3). La grilla tiene 1, 2 o 3 columnas según el ancho, y con 4 por página el cuarto libro
+  quedaba solo en su fila. Los múltiplos de 6 llenan las tres grillas (y 12 y 24, también una de
+  4). Están en `LibroRepository::CANTIDADES` y en `filtros-catalogo.js`.
 
 ### Publicación
 
