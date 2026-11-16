@@ -235,6 +235,7 @@ class ReservaController extends Controller
             'activePage' => 'catalogo',
             'pageClass' => 'page-reserva',
             'extraCss' => ['reserva.css'],
+            'extraJs' => ['paginas/reserva.js'],
             'libros' => $this->catalogo()->todos(),
             'renglones' => $renglones,
             'elegidos' => $elegidos,

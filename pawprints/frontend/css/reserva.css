@@ -252,6 +252,41 @@
   gap: var(--sp-2);
 }
 
+/* «Quitar» de cada renglón y «Agregar otro libro», que pone reserva.js:
+   enlaces más que botones, para no competir con «Enviar Reserva». */
+.page-reserva main form .quitar-renglon,
+.page-reserva main form .agregar-renglon {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--v700);
+  background: none;
+  border: none;
+  padding: var(--sp-2) var(--sp-1);
+  cursor: pointer;
+}
+
+.page-reserva main form .quitar-renglon {
+  /* A la altura de los controles, no de las etiquetas. */
+  align-self: end;
+  margin-bottom: 0.45rem;
+}
+
+.page-reserva main form .agregar-renglon {
+  align-self: flex-start;
+}
+
+.page-reserva main form .quitar-renglon:hover,
+.page-reserva main form .agregar-renglon:hover {
+  color: var(--v900);
+  text-decoration: underline;
+}
+
+.page-reserva main form .quitar-renglon[hidden],
+.page-reserva main form .agregar-renglon[hidden] {
+  display: none;
+}
+
 /* La cantidad va acotada a 5: no necesita el ancho de la fila */
 .page-reserva main form input[type="number"] {
   max-width: 7rem;
@@ -450,6 +485,10 @@
 
   .page-reserva main form div[data-renglon] > div:first-child {
     grid-column: 1 / -1;
+  }
+
+  .page-reserva main form .quitar-renglon {
+    justify-self: end;
   }
 }
 
