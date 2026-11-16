@@ -985,6 +985,10 @@ el sitio contra la inyección SQL y el XSS, completa la carga de libros con la A
 marca cada página con microdata. Está publicado en <https://3-23-199-91.sslip.io> (ver
 [Publicación](#publicación-1)) y se instala como dice [Cómo levantar el sitio](#cómo-levantar-el-sitio).
 
+Antes de cerrarlo se le sumaron dos cosas que no pide ninguna consigna, en la versión 5.1.0: el
+[carrito](#carrito), que hasta entonces era un botón que no hacía nada, y una
+[revisión de las vistas](#revisión-de-las-vistas) en escritorio y celular.
+
 Lo que se agregó al backend:
 
 | Ruta | Contenido |
@@ -1006,7 +1010,8 @@ muestra.
 
 - [`esquema.sql`](pawprints/backend/db/esquema.sql) crea la base (`utf8mb4_0900_ai_ci`, que no
   distingue tildes ni mayúsculas: buscar «ficcion» encuentra «Ficción»), el usuario del sitio y las
-  tablas `libros`, `reservas` y `personal`. Se puede correr en una máquina sin nada y volver a
+  tablas `libros`, `reservas` (con sus libros en `reserva_libros`, desde el [carrito](#carrito)) y
+  `personal`. Se puede correr en una máquina sin nada y volver a
   correr sin perder datos (`IF NOT EXISTS`). [`libros.sql`](pawprints/backend/db/libros.sql) carga
   los 30 libros del catálogo.
 - [`Database`](pawprints/backend/src/Core/Database.php) abre una sola conexión PDO por pedido, y
@@ -1034,7 +1039,8 @@ muestra.
 
 > Modifique su aplicación para que, además de enviarse un correo electrónico al personal, se persista la reserva en el sistema.
 
-Cada reserva se guarda en la tabla `reservas` **antes** de mandar los correos, con
+Cada reserva se guarda en la tabla `reservas` (y sus libros en `reserva_libros`: desde el
+[carrito](#carrito) una reserva puede tener varios) **antes** de mandar los correos, con
 [`ReservaRepository`](pawprints/backend/src/Models/ReservaRepository.php). El orden en
 [`ReservaController::enviar`](pawprints/backend/src/Controllers/ReservaController.php) es: validar
 → guardar → aviso al personal → marcar que el aviso salió → confirmación al cliente.
@@ -1054,8 +1060,8 @@ Cada reserva se guarda en la tabla `reservas` **antes** de mandar los correos, c
 El listado está en `/personal/pedidos`
 ([`PersonalController::pedidos`](pawprints/backend/src/Controllers/PersonalController.php),
 [`pedidos.html.twig`](pawprints/backend/views/personal/pedidos.html.twig)): una tabla paginada con
-el número, la fecha, el libro, la cantidad, los datos del cliente, los comentarios y si salió el
-aviso, de la más nueva a la más vieja.
+el número, la fecha, los libros con su cantidad y su precio, el total, los datos del cliente, los
+comentarios y si salió el aviso, de la más nueva a la más vieja.
 
 Para entrar hace falta un **usuario del personal**:
 
@@ -1439,6 +1445,73 @@ resultados. La pregunta para cada objeto es si la página es la respuesta a una 
   enumeraciones existan): sin errores.
 - Con el stock de un libro en 0, su ficha cambia `availability` a `OutOfStock`.
 
+### Carrito
+
+El carrito estaba en el maquetado desde el TP1 (el enlace «Carrito» del encabezado, el panel
+«Carrito de compras» del pie y el «Agregar al carrito» de la ficha), pero no hacía nada: el panel
+decía siempre que estaba vacío. Ninguna consigna lo pide; se implementó antes de cerrar el TP5
+para que el sitio no tuviera un botón muerto.
+
+PAWPrints no cobra en línea: se reserva y se paga al retirar en la tienda (TP3). Por eso el carrito
+**termina en una reserva con todos sus libros**, la misma de las consignas 2 y 3, que le llega al
+personal por correo y en su listado.
+
+| Dónde | Qué hace |
+| --- | --- |
+| Ficha y tarjetas del catálogo y de las recomendaciones | «Agregar al carrito» suma un ejemplar. Sin stock no aparece |
+| Encabezado | «Carrito (3)»: cuántos ejemplares hay, y lleva al panel |
+| Panel del pie, en todas las páginas | Cada libro con su tapa, − y + para la cantidad, el subtotal y «Quitar»; el total, «Reservar estos libros» y «Vaciar carrito» |
+| [`/reserva?libros[1]=3&libros[11]=1`](pawprints/backend/src/Controllers/ReservaController.php) | El formulario de reserva con un renglón por libro; con JavaScript se agregan y se quitan renglones y el resumen del costado se actualiza |
+| Confirmación | Los libros reservados salen del carrito |
+
+Archivos:
+[`carrito.js`](pawprints/frontend/js/componentes/carrito.js) (el carrito y su panel),
+[`renglones-reserva.js`](pawprints/frontend/js/componentes/renglones-reserva.js) (los renglones del
+formulario), [`macros/carrito.html.twig`](pawprints/backend/views/macros/carrito.html.twig) (el
+botón), [`Reserva`](pawprints/backend/src/Models/Reserva.php) y
+[`ReservaRepository`](pawprints/backend/src/Models/ReservaRepository.php) (la reserva con varios
+libros) y la tabla `reserva_libros` de [`esquema.sql`](pawprints/backend/db/esquema.sql).
+
+#### Decisiones
+
+- **El carrito vive en el navegador, en Local Storage** (`pawprints.carrito`), como el historial de
+  búsquedas del TP4. Guardarlo en el servidor pedía abrir una sesión a cada visitante, y la sesión
+  del sitio se abre sólo para el personal (consigna 3). Así sobrevive a recargar y a cerrar el
+  navegador, se comparte entre pestañas, y lo que se lee se valida: un JSON roto no rompe la página.
+- **Componentes propios**, como pide el TP4 para el JavaScript: sin librerías. Todo el HTML del
+  panel se arma con `createElement` y `textContent`, nunca con `innerHTML` (consigna 6).
+- **«Agregar al carrito» es un enlace a `/reserva?libro=N`.** Sin JavaScript reserva ese libro
+  solo, como antes; con JavaScript, `carrito.js` toma el clic y lo agrega con los datos que trae
+  el enlace en sus `data-*`, sin pedirle nada al servidor. El listener está en el documento, así
+  también anda en las tarjetas que redibuja el filtro del catálogo (`/catalogo/json` suma el stock
+  para eso).
+- **Una reserva, varios libros.** `reservas` guarda al cliente y `reserva_libros` un renglón por
+  libro, con su cantidad y **el precio de ese momento**: es el que el correo le informó al cliente,
+  y no cambia si después cambia el del libro. Se guarda en una transacción, así no queda una
+  reserva a medias.
+- **Los mismos topes en el navegador y en el servidor**: hasta 10 libros distintos y 5 ejemplares
+  de cada uno, o lo que quede en stock. El servidor vuelve a validar todo; además rechaza el mismo
+  libro en dos renglones (el tope no se esquiva partiéndolo) y un libro sin stock.
+- **El carrito pasa a la reserva por la dirección**, `/reserva?libros[3]=2&libros[7]=1`: el
+  formulario lo arma el servidor, con los precios del catálogo y no los que guardó el carrito.
+- **La base se migra sola.** Una base de antes del carrito tiene el libro en `reservas`;
+  `esquema.sql` pasa cada reserva a `reserva_libros` y recién después borra las columnas viejas.
+  MySQL no tiene `DROP COLUMN IF EXISTS`: se consulta `information_schema` y se arma el SQL con
+  `PREPARE`, así el script se sigue pudiendo correr las veces que haga falta.
+- **Los errores de cada renglón van con el id de su control** (`libro-0`, `cantidad-1`): el
+  resumen de errores enlaza al campo y las macros de siempre lo marcan con `aria-invalid`.
+
+#### Pruebas
+
+- En Chrome, a 1366 y a 390 px: dos ejemplares desde la ficha, El Último Faro (stock 1) desde una
+  tarjeta filtrada por «faro», que avisa al pedir el segundo, recargar, «Reservar estos libros»,
+  enviar, y el carrito vacío en la confirmación; en la base, una reserva con sus dos renglones.
+- El formulario con `?libro=3`, con `?libros[3]=2&libros[7]=1` y vacío, y por POST: sin libro, el
+  mismo libro dos veces, más que el stock, 6 ejemplares, un id que no existe, 11 libros y
+  `libro_id` como texto suelto. Cada uno con su mensaje y un `422`.
+- `esquema.sql` sobre una base con reservas de antes (las pasa y borra las columnas), una segunda
+  vez (no cambia nada) y en una base vacía.
+
 ### Revisión de las vistas
 
 Antes de cerrar el TP5 se recorrieron todas las páginas en escritorio (1366 px) y en un celular
@@ -1567,7 +1640,17 @@ Para actualizar el sitio con una versión nueva:
 ```bash
 cd /var/www/pawprints && sudo git pull --ff-only
 cd pawprints/backend && sudo COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --optimize-autoloader
+sudo mysql < db/esquema.sql   # si cambió la base: se puede volver a correr
+sudo mysql < db/libros.sql    # si cambió el catálogo: no pisa lo cargado desde el sitio
 ```
+
+`esquema.sql` vuelve a darle al usuario `pawprints` los permisos de cada tabla, pero no le cambia
+la contraseña (`CREATE USER IF NOT EXISTS`). Las plantillas compiladas no hace falta borrarlas:
+Twig vuelve a compilar la que cambió.
+
+La 5.1.0 (el [carrito](#carrito) y la [revisión de las vistas](#revisión-de-las-vistas)) se publicó
+así, con los dos scripts: `esquema.sql` migró las reservas a `reserva_libros` y `libros.sql` le dio
+su tapa a los libros 7 a 30.
 
 Cómo se comprobó que anda:
 
