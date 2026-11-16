@@ -1459,8 +1459,8 @@ personal por correo y en su listado.
 | Dónde | Qué hace |
 | --- | --- |
 | Ficha y tarjetas del catálogo y de las recomendaciones | «Agregar al carrito» suma un ejemplar. Sin stock no aparece |
-| Encabezado | «Carrito (3)»: cuántos ejemplares hay, y lleva al panel |
-| Panel del pie, en todas las páginas | Cada libro con su tapa, − y + para la cantidad, el subtotal y «Quitar»; el total, «Reservar estos libros» y «Vaciar carrito» |
+| Encabezado | «Carrito (3)»: cuántos ejemplares hay. Abre el panel |
+| Panel lateral, en todas las páginas | Se abre desde la derecha (pantalla completa en el celular) con el botón del encabezado, al agregar un libro o con `#carrito` en la dirección. Cada libro con su tapa, − y + para la cantidad, el subtotal y «Quitar»; el total, «Reservar estos libros» y «Vaciar carrito». Se cierra con ×, Esc o tocando afuera |
 | [`/reserva?libros[1]=3&libros[11]=1`](pawprints/backend/src/Controllers/ReservaController.php) | El formulario de reserva con un renglón por libro; con JavaScript se agregan y se quitan renglones y el resumen del costado se actualiza |
 | Confirmación | Los libros reservados salen del carrito |
 
@@ -1498,11 +1498,23 @@ libros) y la tabla `reserva_libros` de [`esquema.sql`](pawprints/backend/db/esqu
   `esquema.sql` pasa cada reserva a `reserva_libros` y recién después borra las columnas viejas.
   MySQL no tiene `DROP COLUMN IF EXISTS`: se consulta `information_schema` y se arma el SQL con
   `PREPARE`, así el script se sigue pudiendo correr las veces que haga falta.
+- **Un panel lateral, y sin JavaScript al pie.** Desde el TP1 el carrito era un `<aside>` al pie y
+  «Carrito» un enlace a `#carrito`, porque sin JavaScript no había otra forma de mostrarlo. Al pie
+  quedaba lejos: tocar «Carrito» llevaba hasta el fondo y al agregar un libro no se veía nada.
+  `carrito.js` mueve el `<aside>` a un `<dialog>` modal que se abre con `showModal()`: el navegador
+  oscurece y deja inerte el resto, retiene el foco adentro y lo cierra con Esc; el código sólo
+  devuelve el foco a donde estaba. Sin JavaScript sigue el `<aside>` al pie.
+- **Vacío invita a ir al catálogo.** «El carrito está vacío.» era el texto del maquetado, y vacío
+  el carrito nuevo no se distinguía del de antes.
 - **Los errores de cada renglón van con el id de su control** (`libro-0`, `cantidad-1`): el
   resumen de errores enlaza al campo y las macros de siempre lo marcan con `aria-invalid`.
 
 #### Pruebas
 
+- El panel: `/#carrito` lo abre vacío; agregar lo abre con el aviso; se cierra con Esc, con × y
+  tocando afuera, y el foco vuelve al botón que lo abrió; la barra espaciadora en «Carrito» lo
+  abre; con Tab el foco no sale del panel; en el celular ocupa toda la pantalla; sin JavaScript no
+  hay panel y el carrito queda al pie.
 - En Chrome, a 1366 y a 390 px: dos ejemplares desde la ficha, El Último Faro (stock 1) desde una
   tarjeta filtrada por «faro», que avisa al pedir el segundo, recargar, «Reservar estos libros»,
   enviar, y el carrito vacío en la confirmación; en la base, una reserva con sus dos renglones.
@@ -1650,7 +1662,8 @@ Twig vuelve a compilar la que cambió.
 
 La 5.1.0 (el [carrito](#carrito) y la [revisión de las vistas](#revisión-de-las-vistas)) se publicó
 así, con los dos scripts: `esquema.sql` migró las reservas a `reserva_libros` y `libros.sql` le dio
-su tapa a los libros 7 a 30.
+su tapa a los libros 7 a 30. La 5.1.1 (el carrito como panel lateral) no cambió la base: alcanzó con el
+`git pull`.
 
 Cómo se comprobó que anda:
 
