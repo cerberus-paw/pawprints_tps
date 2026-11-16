@@ -396,6 +396,150 @@ body > header > p:last-child a:hover {
   }
 }
 
+/* ── El carrito como panel lateral (TP5-11.F1) ──────────────────
+   Con JavaScript, carrito.js mueve el <aside> adentro de un <dialog>
+   modal que se abre desde la derecha. Sin JavaScript no hay <dialog> y
+   valen las reglas de arriba: el panel al pie, como en el TP1. */
+.carrito-dialogo {
+  /* El <dialog> modal viene centrado y con borde: acá ocupa el alto
+     entero, pegado a la derecha. */
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(440px, 100vw);
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: var(--v50);
+  box-shadow: var(--sh-lg, 0 10px 40px rgba(0, 0, 0, 0.25));
+  animation: carrito-entra 0.22s ease-out;
+}
+
+.carrito-dialogo::backdrop {
+  background: rgba(26, 10, 38, 0.45);
+}
+
+@keyframes carrito-entra {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carrito-dialogo { animation: none; }
+}
+
+/* La página de atrás no se desplaza mientras el panel está abierto. */
+html:has(.carrito-dialogo[open]) {
+  overflow: hidden;
+}
+
+/* El panel llena el <dialog>: arriba el título, en el medio la lista,
+   que se desplaza sola, y abajo el total y las acciones, siempre a la
+   vista. */
+.carrito-dialogo #carrito {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-top: none;
+}
+
+.carrito-dialogo #carrito > * {
+  max-width: none;
+  margin-inline: 0;
+}
+
+.carrito-dialogo .carrito-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border-v);
+}
+
+.carrito-dialogo .carrito-cabecera h2 {
+  margin-bottom: 0;
+}
+
+.carrito-dialogo #carrito .carrito-cerrar {
+  font-size: var(--text-2xl);
+  line-height: 1;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--r-md);
+}
+
+.carrito-dialogo .carrito-aviso {
+  margin-top: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--white);
+  border-left: 3px solid var(--v700);
+  border-radius: var(--r-sm);
+  color: var(--dark);
+}
+
+.carrito-dialogo #carrito > p:not(.carrito-aviso):not(.solo-lectores) {
+  margin-top: var(--sp-4);
+}
+
+.carrito-dialogo #carrito > p a {
+  color: var(--v700);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.carrito-dialogo [data-carrito-contenido] {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.carrito-dialogo [data-carrito-contenido]:empty {
+  display: none;
+}
+
+.carrito-dialogo #carrito ul {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-block: var(--sp-1);
+}
+
+/* En el panel angosto, cada libro en dos filas: la tapa y los datos, y
+   abajo la cantidad, el subtotal y «Quitar». */
+.carrito-dialogo #carrito li {
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "tapa datos    datos"
+    "tapa cantidad total"
+    "tapa quitar   quitar";
+  row-gap: var(--sp-1);
+  padding: var(--sp-3);
+}
+
+.carrito-dialogo #carrito li img { grid-area: tapa; align-self: start; }
+.carrito-dialogo #carrito li > div:first-of-type { grid-area: datos; }
+.carrito-dialogo #carrito .carrito-cantidad { grid-area: cantidad; justify-self: start; }
+.carrito-dialogo #carrito .carrito-subtotal { grid-area: total; }
+.carrito-dialogo #carrito li > button { grid-area: quitar; justify-self: end; padding-block: 0; }
+
+.carrito-dialogo #carrito .carrito-total {
+  margin-top: var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-v);
+}
+
+.carrito-dialogo #carrito .carrito-acciones {
+  justify-content: stretch;
+}
+
+.carrito-dialogo #carrito .boton-carrito {
+  flex: 1;
+  justify-content: center;
+}
+
 /* Lo que sólo tiene que oír un lector de pantalla, como el aviso de cada
    cambio del carrito. */
 .solo-lectores {

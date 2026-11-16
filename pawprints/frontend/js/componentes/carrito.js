@@ -9,8 +9,11 @@
  *   tarjeta del catálogo) agrega su libro, que viaja en sus data-*. El listener va en el
  *   documento, así también anda en las tarjetas que redibuja el filtro del catálogo. Esos
  *   elementos son enlaces a /reserva?libro=N: sin JavaScript, llevan a reservar ese libro solo.
- * - Dibuja el panel #carrito del pie (cada libro con su cantidad, el subtotal y «Quitar», el
- *   total, «Reservar» y «Vaciar») y el contador del «Carrito» del encabezado.
+ * - Dibuja el panel #carrito (cada libro con su cantidad, el subtotal y «Quitar», el total,
+ *   «Reservar» y «Vaciar») y el contador del «Carrito» del encabezado.
+ * - El panel se abre como un costado de la pantalla (un <dialog> modal): con el «Carrito» del
+ *   encabezado, al agregar un libro y al entrar con #carrito en la dirección. Sin JavaScript
+ *   queda como en el TP1, al pie de la página, y el «Carrito» es un enlace hasta él.
  * - «Reservar» lleva a /reserva?libros[3]=2&libros[7]=1, que el servidor convierte en un renglón
  *   por libro. Al confirmarse la reserva, la página de confirmación trae en data-reservados los
  *   libros reservados, y salen del carrito.
@@ -160,12 +163,18 @@ export function libroDe(elemento) {
  * El panel #carrito y el contador del encabezado.
  *
  * Uso: new PanelCarrito(document.getElementById('carrito'), enlaceDelEncabezado)
+ *
+ * El <aside> que imprime el servidor al pie se mueve adentro de un <dialog>, que se abre con
+ * showModal(): el navegador oscurece el resto, lo vuelve inerte, deja el foco adentro y lo cierra
+ * con Esc, sin código propio para cada cosa.
  */
 export class PanelCarrito {
   constructor(panel, enlace) {
     this.panel = panel;
     this.enlace = enlace;
     this.vacio = panel.querySelector('p');
+    this.armarDialogo();
+    this.armarVacio();
 
     this.contenido = document.createElement('div');
     this.contenido.dataset.carritoContenido = '';
@@ -181,15 +190,94 @@ export class PanelCarrito {
     }
 
     document.addEventListener('click', (e) => this.alHacerClic(e));
+    // Un enlace a #carrito (el del encabezado sin JavaScript, o uno guardado) abre el panel.
+    window.addEventListener('hashchange', () => {
+      if (window.location.hash === '#carrito') this.abrir();
+    });
     // Otra pestaña cambió el carrito: se redibuja con lo nuevo.
     window.addEventListener('storage', (e) => {
       if (e.key === CLAVE_CARRITO || e.key === null) this.dibujar();
     });
 
     this.dibujar();
+    if (window.location.hash === '#carrito') this.abrir();
+  }
+
+  armarDialogo() {
+    this.dialogo = document.createElement('dialog');
+    this.dialogo.className = 'carrito-dialogo';
+    const titulo = this.panel.querySelector('h2');
+    titulo.id ||= 'titulo-carrito';
+    this.dialogo.setAttribute('aria-labelledby', titulo.id);
+
+    // El título y la cruz para cerrar, en una misma fila.
+    const cerrar = boton('×', { carritoAccion: 'cerrar' }, 'Cerrar el carrito');
+    cerrar.className = 'carrito-cerrar';
+    const cabecera = elemento('div', { className: 'carrito-cabecera' });
+    titulo.before(cabecera);
+    cabecera.append(titulo, cerrar);
+
+    this.panel.replaceWith(this.dialogo);
+    this.dialogo.append(this.panel);
+
+    // Tocar el fondo oscuro cierra: ese clic le llega al <dialog> mismo, porque el panel lo llena.
+    this.dialogo.addEventListener('click', (e) => {
+      if (e.target === this.dialogo) this.cerrar();
+    });
+    // Con Esc lo cierra el navegador: acá sólo se devuelve el foco y se limpia la dirección.
+    this.dialogo.addEventListener('close', () => this.alCerrar());
+
+    if (this.enlace) {
+      this.enlace.setAttribute('role', 'button');
+      this.enlace.setAttribute('aria-haspopup', 'dialog');
+      this.enlace.setAttribute('aria-controls', this.panel.id);
+      this.enlace.setAttribute('aria-expanded', 'false');
+      // Como botón, también se activa con la barra espaciadora.
+      this.enlace.addEventListener('keydown', (e) => {
+        if (e.key === ' ') {
+          e.preventDefault();
+          this.abrir();
+        }
+      });
+    }
+  }
+
+  /** Vacío, el panel invita a ir al catálogo: «El carrito está vacío.» parecía el maquetado del TP1. */
+  armarVacio() {
+    this.vacio.replaceChildren(
+      'Todavía no agregaste libros. Usá «Agregar al carrito» en el catálogo o en la ficha de un libro. ',
+      elemento('a', { href: '/catalogo' }, 'Ver el catálogo →'),
+    );
+  }
+
+  abrir() {
+    if (this.dialogo.open) return;
+    this.anterior = document.activeElement;
+    this.dialogo.showModal();
+    this.enlace?.setAttribute('aria-expanded', 'true');
+  }
+
+  cerrar() {
+    if (this.dialogo.open) this.dialogo.close();
+  }
+
+  alCerrar() {
+    this.enlace?.setAttribute('aria-expanded', 'false');
+    // Sin el #carrito en la dirección, recargar no lo vuelve a abrir.
+    if (window.location.hash === '#carrito') {
+      history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    if (this.anterior instanceof HTMLElement && this.anterior.isConnected) this.anterior.focus();
   }
 
   alHacerClic(e) {
+    const abrir = e.target.closest('a[href="#carrito"]');
+    if (abrir && !this.panel.contains(abrir)) {
+      e.preventDefault();
+      this.abrir();
+      return;
+    }
+
     const boton = e.target.closest('[data-carrito-agregar]');
     if (boton) {
       // El enlace a /reserva queda para cuando no hay JavaScript.
@@ -216,6 +304,9 @@ export class PanelCarrito {
       case 'vaciar':
         this.cambiar(vaciar(), 'Vaciaste el carrito.', true);
         break;
+      case 'cerrar':
+        this.cerrar();
+        break;
       default:
     }
   }
@@ -229,20 +320,23 @@ export class PanelCarrito {
       invalido: () => 'No se pudo agregar ese libro.',
     };
     this.dibujar(libros);
+    // El panel se abre con lo que se agregó (o con el aviso de por qué no): así se ve qué pasó.
+    this.abrir();
     this.avisar(mensajes[resultado]());
+    this.mostrarAviso(mensajes[resultado]());
+  }
 
-    // Una confirmación en el mismo botón: el panel está al pie y no se ve desde ahí.
-    if (resultado === 'agregado') {
-      const texto = boton.dataset.textoOriginal ?? boton.textContent;
-      boton.dataset.textoOriginal = texto;
-      boton.textContent = '✓ En el carrito';
-      clearTimeout(boton._carritoTimer);
-      boton._carritoTimer = setTimeout(() => { boton.textContent = texto; }, 1800);
-    }
+  /** El aviso de agregar también se ve, arriba de la lista: el de lector de pantalla no se ve. */
+  mostrarAviso(texto) {
+    this.visible ??= this.panel.querySelector('.carrito-aviso')
+      ?? elemento('p', { className: 'carrito-aviso' });
+    this.visible.textContent = texto;
+    this.panel.querySelector('.carrito-cabecera').after(this.visible);
   }
 
   cambiar(libros, mensaje, moverFoco = false) {
     this.dibujar(libros);
+    this.visible?.remove();
     this.avisar(mensaje);
     // El botón que se tocó ya no existe: el foco vuelve al título del panel en lugar de perderse.
     if (moverFoco) {
